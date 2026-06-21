@@ -43,7 +43,7 @@ if (File.Exists(fileName))
 while (true)
 {
     Console.WriteLine("\n*Personal Finance Tracker*\n");
-    Console.WriteLine("1. Add transaction");
+    Console.WriteLine("1. User summary");
     Console.WriteLine("2. Add transaction");
     Console.WriteLine("3. View all transactions");
     Console.WriteLine("4. Delete a transaction");
@@ -54,20 +54,31 @@ while (true)
     switch (userInput)
     {
         case "1":
-            AddTransaction();
+            UserSummary();
             break;
         case "2":
-            ViewTransactions();
+            AddTransaction();
             break;
         case "3":
-            DeleteTransaction();
+            ViewTransactions();
             break;
         case "4":
+            DeleteTransaction();
+            break;
+        case "5":
             SaveData();
             return;
         default:
             Console.WriteLine("Invalid input");
             break;
+    }
+
+    void UserSummary()
+    {
+        while (true)
+        {
+            //Console.WriteLine($"Current Balance: {User.Balance}");
+        }
     }
 
     void AddTransaction()
@@ -156,6 +167,14 @@ class Transaction
     public string? TransactionDescription { get; set; }
     public string? TransactionDate { get; set; }
     public decimal TransactionAmount { get; set; }
+}
+
+class User
+{
+    public decimal Balance { get; set; }
+    public decimal MonthlyIncome { get; set; }
+    public decimal MonthlyExpenses { get; set; }
+    public decimal NetSavings { get; set; }
 }
 
 class JsonOptions
