@@ -1,6 +1,8 @@
 ﻿using System.Text.Json;
 
 List<Transaction> transactionList = new List<Transaction>();
+List<User> userList = new List<User>();
+
 string fileName = "FinanceTracker.json";
 string backupFile = "FinanceTracker.backup.json";
 
@@ -43,34 +45,76 @@ if (File.Exists(fileName))
 while (true)
 {
     Console.WriteLine("\n*Personal Finance Tracker*\n");
-    Console.WriteLine("1. User summary");
-    Console.WriteLine("2. Add transaction");
-    Console.WriteLine("3. View all transactions");
-    Console.WriteLine("4. Delete a transaction");
-    Console.WriteLine("5. Exit\n");
+    Console.WriteLine("1. Add user");
+    Console.WriteLine("2. User summary");
+    Console.WriteLine("3. Add transaction");
+    Console.WriteLine("4. View all transactions");
+    Console.WriteLine("5. Delete a transaction");
+    Console.WriteLine("6. Exit\n");
 
     string? userInput = Console.ReadLine();
 
     switch (userInput)
     {
         case "1":
-            UserSummary();
+            AddUser();
             break;
         case "2":
-            AddTransaction();
+            UserSummary();
             break;
         case "3":
-            ViewTransactions();
+            AddTransaction();
             break;
         case "4":
-            DeleteTransaction();
+            ViewTransactions();
             break;
         case "5":
+            DeleteTransaction();
+            break;
+        case "6":
             SaveData();
             return;
         default:
             Console.WriteLine("Invalid input");
             break;
+    }
+
+    void AddUser()
+    {
+        Console.WriteLine("Please enter the users name");
+        string? usersName = Console.ReadLine();
+
+        Console.WriteLine("Please enter the users current balance");
+        if (!decimal.TryParse(Console.ReadLine(), out decimal usersBalance))
+        {
+            Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+            Console.ReadLine();
+            return; // may havge to reverse the order of if statements
+        }
+
+        Console.WriteLine("Please enter the users monthly income");
+        if (!decimal.TryParse(Console.ReadLine(), out decimal usersIncome))
+        {
+            Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+            Console.ReadLine();
+        }
+
+        Console.WriteLine("Please enter the users monthly expenses");
+        if (!decimal.TryParse(Console.ReadLine(), out decimal usersExpenses))
+        {
+            Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+            Console.ReadLine();
+        }
+
+        User user = new User();
+
+        user.userName = usersName;
+        user.Balance = usersBalance;
+        user.MonthlyIncome = usersIncome;
+        user.MonthlyExpenses = usersExpenses;
+
+        userList.Add(user);
+
     }
 
     void UserSummary()
@@ -171,6 +215,7 @@ class Transaction
 
 class User
 {
+    public string? userName;
     public decimal Balance { get; set; }
     public decimal MonthlyIncome { get; set; }
     public decimal MonthlyExpenses { get; set; }
