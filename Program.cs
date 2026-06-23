@@ -1,6 +1,5 @@
 ﻿using System.Text.Json;
 
-List<Transaction> transactionList = new List<Transaction>();
 List<User> userList = new List<User>();
 
 string fileName = "FinanceTracker.json";
@@ -13,7 +12,7 @@ if (File.Exists(fileName))
 
     try
     {
-        transactionList = JsonSerializer.Deserialize<List<Transaction>>(dataFile) ?? new List<Transaction>();
+        userList = JsonSerializer.Deserialize<List<User>>(dataFile) ?? new List<User>();
     }
     catch
     {
@@ -27,7 +26,7 @@ if (File.Exists(fileName))
             {
                 case "1":
                     File.Copy(fileName, backupFile, true);
-                    transactionList = new List<Transaction>();
+                    userList = new List<User>();
                     break;
                 case "2":
                     Environment.Exit(0);
@@ -89,7 +88,6 @@ while (true)
         {
             Console.WriteLine("Invalid input\nPress enter to return to the main menu");
             Console.ReadLine();
-            return; // may havge to reverse the order of if statements
         }
 
         Console.WriteLine("Please enter the users monthly income");
@@ -97,6 +95,7 @@ while (true)
         {
             Console.WriteLine("Invalid input\nPress enter to return to the main menu");
             Console.ReadLine();
+            return;
         }
 
         Console.WriteLine("Please enter the users monthly expenses");
@@ -104,6 +103,7 @@ while (true)
         {
             Console.WriteLine("Invalid input\nPress enter to return to the main menu");
             Console.ReadLine();
+            return;
         }
 
         User user = new User();
@@ -127,81 +127,149 @@ while (true)
 
     void AddTransaction()
     {
-        Console.WriteLine("\nPlease enter a description for the transaction");
-        string? purchaseDescription = Console.ReadLine();
-
-        Console.WriteLine("\nPlease enter the date of the transaction (Format: MM/DD/YYYY)");
-        string? purchaseDate = Console.ReadLine();
-
-        Console.WriteLine("\nPlease enter the transaction amount");
-        if (decimal.TryParse(Console.ReadLine(), out decimal purchaseAmount))
+        if (userList.Count > 0)
         {
-            Transaction transaction = new Transaction();
+            Console.WriteLine("Please select which user to add the transaction to");
+            for (int i = 0; i < userList.Count; i++)
+            {
+                Console.WriteLine(userList[i]);
+            }
 
-            transaction.TransactionDescription = purchaseDescription;
-            transaction.TransactionDate = purchaseDate;
-            transaction.TransactionAmount = purchaseAmount;
+            if ((int.TryParse(Console.ReadLine(), out int userInput)) && (userInput <= userList.Count - 1))
+            {
+                Console.WriteLine("\nPlease enter a description for the transaction");
+                string? purchaseDescription = Console.ReadLine();
 
-            transactionList.Add(transaction);
+                Console.WriteLine("\nPlease enter the date of the transaction (Format: MM/DD/YYYY)");
+                string? purchaseDate = Console.ReadLine();
 
-            SaveData();
+                Console.WriteLine("\nPlease enter the transaction amount");
+                if (decimal.TryParse(Console.ReadLine(), out decimal purchaseAmount))
+                {
+                    userList[userInput].transaction.TransactionDescription = purchaseDescription;
+                    userList[userInput].transaction.TransactionDate = purchaseDate;
+                    userList[userInput].transaction.TransactionAmount = purchaseAmount;
+
+                    userList[userInput].transactionList.Add(userList[userInput].transaction);
+
+                    SaveData();
+                }
+                else
+                {
+                    Console.WriteLine("Invalid input\nPress enter to return to the menu");
+                    Console.ReadLine();
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+                Console.ReadLine();
+            }
         }
         else
         {
-            Console.WriteLine("Invalid input\nPress enter to return to the menu");
+            Console.WriteLine("There are no users to add a transaction too. Please add a user first"
+            + "\nPress enter to return to the main menu");
             Console.ReadLine();
         }
-
-
     }
 
     void ViewTransactions()
     {
-        Console.WriteLine($"Transaction description\t\t\t\tTransaction Amount\t\tTransaction Date");
+        if (!(userList.Count > 0))
+        {
+            Console.WriteLine("There are no users to add a transaction too. Please add a user first"
+            + "\nPress enter to return to the main menu");
+            Console.ReadLine();
+            return;
+        }
+        else
+        {
+            Console.WriteLine("Please select which users transactions you would like to view");
+            for (int i = 0; i < userList.Count; i++)
+            {
+                Console.WriteLine(userList[i]);
+            }
+
+            if ((int.TryParse(Console.ReadLine(), out int userInput)) && (userInput <= userList.Count - 1))
+            {
+                foreach (Transaction transaction in userList[userInput].transactionList)
+                {
+                    Console.WriteLine($"{transaction.TransactionDescription,-48}{transaction.TransactionAmount,-32}{transaction.TransactionDate}");
+                }
+            }
+            else
+            {
+                Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+                Console.ReadLine();
+                return;
+            }
+        }
+
+
+        /* Console.WriteLine($"Transaction description\t\t\t\tTransaction Amount\t\tTransaction Date");
         Console.WriteLine("-------------------------------------------------------------------------------------------------------------------------");
-        foreach (Transaction transaction in transactionList)
+        foreach (Transaction transaction in userList[userInput].transactionList)
         {
             Console.WriteLine($"{transaction.TransactionDescription,-48}{transaction.TransactionAmount,-32}{transaction.TransactionDate}");
         }
 
         Console.WriteLine("\nPress enter to return to the menu");
-        Console.ReadLine();
+        Console.ReadLine(); */
     }
 
     void DeleteTransaction()
     {
-        if (transactionList.Count > 0)
+        Console.WriteLine("Please enter which user you wish to delete a transaction from");
+        for (int i = 0; i < userList.Count; i++)
         {
-            Console.WriteLine($"Transaction description\t\t\t\tTransaction Amount\t\tTransaction Date");
-            Console.WriteLine("-------------------------------------------------------------------------------------------------------------------------");
+            Console.WriteLine(userList[i]);
+        }
 
-            for (int i = 0; i < transactionList.Count; i++)
+        if (int.TryParse(Console.ReadLine(), out int userInput))
+        {
+            if (userList[userInput].transactionList.Count > 0)
             {
-                Console.WriteLine($"{i}: {transactionList[i].TransactionDescription,-48}{transactionList[i].TransactionAmount,-32}{transactionList[i].TransactionDate}");
+                Console.WriteLine($"Transaction description\t\t\t\tTransaction Amount\t\tTransaction Date");
+                Console.WriteLine("-------------------------------------------------------------------------------------------------------------------------");
+
+                for (int i = 0; i < userList[userInput].transactionList.Count; i++)
+                {
+                    Console.WriteLine($"{i}: {userList[userInput].transactionList[i].TransactionDescription,-48}{userList[userInput].transactionList[i].TransactionAmount,-32}{userList[userInput].transactionList[i].TransactionDate}");
+                }
+
+                Console.WriteLine("\nPlease enter the number of the transaction you wish to delete");
+
+                if (int.TryParse(Console.ReadLine(), out int transactionInput))
+                {
+                    userList[userInput].transactionList.RemoveAt(transactionInput);
+                }
+
+                SaveData();
+
+                Console.WriteLine("\nTransaction deleted\nPress enter to return to the menu");
+                Console.ReadLine();
             }
-
-            Console.WriteLine("\nPlease enter the number of the transaction you wish to delete");
-
-            if (int.TryParse(Console.ReadLine(), out int userInput))
+            else
             {
-                transactionList.RemoveAt(userInput);
+                Console.WriteLine("There are no available transactions\nPress enter to return to the menu");
+                Console.ReadLine();
+                return;
             }
-
-            SaveData();
-
-            Console.WriteLine("\nTransaction deleted\nPress enter to return to the menu");
-            Console.ReadLine();
         }
         else
         {
-            Console.WriteLine("There are no available transactions\nPress enter to return to the menu");
+            Console.WriteLine("Invalid input\nPress enter to return to the main menu");
             Console.ReadLine();
+            return;
         }
     }
 
+
+
     void SaveData()
     {
-        string jsonString = JsonSerializer.Serialize(transactionList, JsonOptions.Options);
+        string jsonString = JsonSerializer.Serialize(userList, JsonOptions.Options);
         File.WriteAllText(fileName, jsonString);
     }
 }
@@ -220,6 +288,8 @@ class User
     public decimal MonthlyIncome { get; set; }
     public decimal MonthlyExpenses { get; set; }
     public decimal NetSavings { get; set; }
+    public List<Transaction> transactionList = new List<Transaction>();
+    public Transaction transaction = new Transaction();
 }
 
 class JsonOptions
