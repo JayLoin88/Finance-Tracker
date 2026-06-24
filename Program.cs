@@ -139,7 +139,7 @@ while (true)
                 if ((userInput <= userList.Count - 1) && (userInput >= 0))
                 {
                     userList[userInput].NetSavings = userList[userInput].MonthlyIncome - userList[userInput].MonthlyExpenses;
-                    userList[userInput].totalTransactions = userList[userInput].transactions.Count;
+                    userList[userInput].TotalTransactions = userList[userInput].Transactions.Count;
 
                     Console.WriteLine($"\nUser: {userList[userInput].UserName}");
                     Console.WriteLine($"Balance: {userList[userInput].Balance}\n");
@@ -148,7 +148,8 @@ while (true)
                     Console.WriteLine($"Monthly expenses: {userList[userInput].MonthlyExpenses}");
                     Console.WriteLine($"Net savings: {userList[userInput].NetSavings}\n");
 
-                    Console.WriteLine($"Total transactions: {userList[userInput].totalTransactions}\n\n");
+                    Console.WriteLine($"Total transactions: {userList[userInput].TotalTransactions}");
+                    Console.WriteLine($"Largest expense: {userList[userInput].LargestExpense}\n\n");
 
 
                     Console.WriteLine("Press enter to return to the main menu");
@@ -202,7 +203,12 @@ while (true)
                     transaction.TransactionDate = purchaseDate;
                     transaction.TransactionAmount = purchaseAmount;
 
-                    userList[userInput].transactions.Add(transaction);
+                    if (purchaseAmount > userList[userInput].LargestExpense)
+                    {
+                        userList[userInput].LargestExpense = purchaseAmount;
+                    }
+
+                    userList[userInput].Transactions.Add(transaction);
 
                     SaveData();
 
@@ -249,12 +255,12 @@ while (true)
 
             if (int.TryParse(Console.ReadLine(), out int userInput) && (userInput <= userList.Count - 1))
             {
-                if (userList[userInput].transactions.Count >= 1)
+                if (userList[userInput].Transactions.Count >= 1)
                 {
                     Console.WriteLine($"Transaction Category\t\tTransaction Description\t\t\t\tTransaction Amount\t\tTransaction Date");
                     Console.WriteLine("-------------------------------------------------------------------------------------------------------------------------------------------");
 
-                    foreach (Transaction transaction in userList[userInput].transactions)
+                    foreach (Transaction transaction in userList[userInput].Transactions)
                     {
                         Console.WriteLine($"{transaction.TransactionCategory,-32}{transaction.TransactionDescription,-48}{transaction.TransactionAmount,-32}{transaction.TransactionDate}");
                     }
@@ -301,21 +307,31 @@ while (true)
         {
             if ((userInput <= userList.Count - 1) && (userInput >= 0))
             {
-                if (userList[userInput].transactions.Count > 0)
+                if (userList[userInput].Transactions.Count > 0)
                 {
                     Console.WriteLine($"Transaction Category\t\tTransaction Description\t\t\t\tTransaction Amount\t\tTransaction Date");
                     Console.WriteLine("-------------------------------------------------------------------------------------------------------------------------------------------");
 
-                    for (int i = 0; i < userList[userInput].transactions.Count; i++)
+                    for (int i = 0; i < userList[userInput].Transactions.Count; i++)
                     {
-                        Console.WriteLine($"{i}: {userList[userInput].transactions[i].TransactionCategory,-29}{userList[userInput].transactions[i].TransactionDescription,-48}{userList[userInput].transactions[i].TransactionAmount,-32}{userList[userInput].transactions[i].TransactionDate}");
+                        Console.WriteLine($"{i}: {userList[userInput].Transactions[i].TransactionCategory,-29}{userList[userInput].Transactions[i].TransactionDescription,-48}{userList[userInput].Transactions[i].TransactionAmount,-32}{userList[userInput].Transactions[i].TransactionDate}");
                     }
 
                     Console.WriteLine("\nPlease enter the number of the transaction you wish to delete");
 
-                    if (int.TryParse(Console.ReadLine(), out int transactionInput) && (transactionInput <= userList[userInput].transactions.Count - 1) && (transactionInput >= 0))
+                    if (int.TryParse(Console.ReadLine(), out int transactionInput) && (transactionInput <= userList[userInput].Transactions.Count - 1) && (transactionInput >= 0))
                     {
-                        userList[userInput].transactions.RemoveAt(transactionInput);
+                        userList[userInput].Transactions.RemoveAt(transactionInput);
+
+                        decimal minValue = 0;
+                        userList[userInput].LargestExpense = minValue;
+                        foreach (var transaction in userList[userInput].Transactions)
+                        {
+                            if (transaction.TransactionAmount > userList[userInput].LargestExpense)
+                            {
+                                userList[userInput].LargestExpense = transaction.TransactionAmount;
+                            }
+                        }
                     }
                     else
                     {
@@ -357,9 +373,9 @@ while (true)
     {
         for (int i = 0; i < userList.Count; i++)
         {
-            userList[i].totalTransactions = userList[i].transactions.Count;
+            userList[i].TotalTransactions = userList[i].Transactions.Count;
         }
-        
+
         string jsonString = JsonSerializer.Serialize(userList, JsonOptions.Options);
         File.WriteAllText(fileName, jsonString);
     }
@@ -380,8 +396,9 @@ class User
     public decimal MonthlyIncome { get; set; }
     public decimal MonthlyExpenses { get; set; }
     public decimal NetSavings { get; set; }
-    public int totalTransactions { get; set; }
-    public List<Transaction> transactions { get; set; } = new List<Transaction>();
+    public int TotalTransactions { get; set; }
+    public decimal LargestExpense { get; set; }
+    public List<Transaction> Transactions { get; set; } = new List<Transaction>();
 }
 
 class JsonOptions
