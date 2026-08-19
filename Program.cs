@@ -1,10 +1,41 @@
 ﻿using System.Text.Json;
+using Microsoft.Data.SqlClient;
 
 List<User> userList = new List<User>();
+
+string connectionString = "Server=localhost;Database=FinanceTracker;Integrated Security=True;TrustServerCertificate=True;";
+string query = "SELECT FirstName, LastName FROM Users";
 
 string fileName = "FinanceTracker.json";
 string backupFile = "FinanceTracker.backup.json";
 
+using (SqlConnection connection = new SqlConnection(connectionString))
+{
+    using (SqlCommand command = new SqlCommand(query, connection))
+    {
+        try
+        {
+            connection.Open();
+            Console.WriteLine("Connection Succesful");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Connection Failed: {ex.Message}");
+            return;
+        }
+
+        using (SqlDataReader reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                string FirstName = reader.GetString(0);
+                string LastName = reader.GetString(1);
+
+                Console.WriteLine($"Name: {FirstName} {LastName}");
+            }
+        }
+    }
+}
 
 if (File.Exists(fileName))
 {
