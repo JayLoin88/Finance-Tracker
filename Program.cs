@@ -4,19 +4,20 @@ using Microsoft.Data.SqlClient;
 List<User> userList = new List<User>();
 
 string connectionString = "Server=localhost;Database=FinanceTracker;Integrated Security=True;TrustServerCertificate=True;";
-string query = "SELECT FirstName, LastName FROM Users";
+string startQuery = "SELECT UserId, FirstName, LastName, Balance, MonthlyIncome, MonthlyExpenses FROM Users";
+string viewTransactionQuery = "SELECT TransactionId, Amount, UserId, CategoryId, TransactionDate, TransactionDescription FROM Transactions";
 
-string fileName = "FinanceTracker.json";
-string backupFile = "FinanceTracker.backup.json";
+/* string fileName = "FinanceTracker.json";
+string backupFile = "FinanceTracker.backup.json"; */
 
 using (SqlConnection connection = new SqlConnection(connectionString))
 {
-    using (SqlCommand command = new SqlCommand(query, connection))
+    using (SqlCommand command = new SqlCommand(startQuery, connection))
     {
         try
         {
             connection.Open();
-            Console.WriteLine("Connection Succesful");
+            Console.WriteLine("Connection Successful");
         }
         catch (Exception ex)
         {
@@ -28,16 +29,67 @@ using (SqlConnection connection = new SqlConnection(connectionString))
         {
             while (reader.Read())
             {
-                string FirstName = reader.GetString(0);
-                string LastName = reader.GetString(1);
+                int UserId = reader.GetInt32(0);
+                string FirstName = reader.GetString(1);
+                string LastName = reader.GetString(2);
+                decimal Balance = reader.GetDecimal(3);
+                decimal MonthlyIncome = reader.GetDecimal(4);
+                decimal MonthlyExpenses = reader.GetDecimal(5);
 
-                Console.WriteLine($"Name: {FirstName} {LastName}");
+                User user = new User();
+
+                user.UserId = UserId;
+                user.FirstName = FirstName;
+                user.LastName = LastName;
+                user.Balance = Balance;
+                user.MonthlyIncome = MonthlyIncome;
+                user.MonthlyExpenses = MonthlyExpenses;
+                userList.Add(user);
+
+                //Console.WriteLine($"User Id: {UsersId} \n Name: {FirstName} {LastName}");
             }
         }
     }
+
+
+    using (SqlCommand addTransactions = new SqlCommand(viewTransactionQuery, connection))
+    {
+        using (SqlDataReader reader = addTransactions.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                int TransactionId = reader.GetInt32(0);
+                decimal Amount = reader.GetDecimal(1);
+                int UserId = reader.GetInt32(2);
+                int CategoryId = reader.GetInt32(3);
+                DateTime fullDateTime = reader.GetDateTime(4);
+                DateOnly TransactionDate = DateOnly.FromDateTime(fullDateTime);
+                string? TransactionDescription = reader.GetString(5);
+
+                Transaction transaction = new Transaction();
+
+                transaction.TransactionId = TransactionId;
+                transaction.Amount = Amount;
+                transaction.UserId = UserId;
+                transaction.CategoryId = CategoryId;
+                transaction.TransactionDate = TransactionDate;
+                transaction.TransactionDescription = TransactionDescription;
+
+                foreach (User user in userList)
+                {
+                    if (user.UserId == transaction.UserId)
+                    {
+                        user.TransactionList.Add(transaction);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    DisplayUsers();
 }
 
-if (File.Exists(fileName))
+/* if (File.Exists(fileName))
 {
     var dataFile = File.ReadAllText(fileName);
 
@@ -70,7 +122,7 @@ if (File.Exists(fileName))
             break;
         }
     }
-}
+} */
 
 while (true)
 {
@@ -102,7 +154,7 @@ while (true)
             DeleteTransaction();
             break;
         case "6":
-            SaveData();
+            //SaveData();
             return;
         default:
             Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
@@ -112,8 +164,11 @@ while (true)
 
     void AddUser()
     {
-        Console.WriteLine("Please enter the users name");
-        string? usersName = Console.ReadLine();
+        Console.WriteLine("Please enter the users first name");
+        string? firstName = Console.ReadLine();
+
+        Console.WriteLine("Please enter the users last name");
+        string? lastName = Console.ReadLine();
 
         Console.WriteLine("Please enter the users current balance");
         if (!decimal.TryParse(Console.ReadLine(), out decimal usersBalance))
@@ -141,16 +196,60 @@ while (true)
 
         User user = new User();
 
-        user.UserName = usersName;
+        user.FirstName = firstName;
+        user.LastName = lastName;
         user.Balance = usersBalance;
         user.MonthlyIncome = usersIncome;
         user.MonthlyExpenses = usersExpenses;
 
-        userList.Add(user);
-        SaveData();
 
-        Console.WriteLine("\nNew user succesffuly added\nPress enter to return to the main menu");
-        Console.ReadLine();
+
+        string addUserQuery = "INSERT INTO Users (FirstName, LastName, Balance, MonthlyIncome, MonthlyExpenses) " +
+                                "OUTPUT INSERTED.UserId " +
+                                "VALUES (@FirstName, @LastName, @Balance, @MonthlyIncome, @MonthlyExpenses)";
+
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+
+            try
+            {
+                connection.Open();
+                Console.WriteLine("Connection Successful");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Connection failed: {ex.Message}");
+                return;
+            }
+
+            using (SqlCommand command = new SqlCommand(addUserQuery, connection))
+            {
+                command.Parameters.AddWithValue("@FirstName", firstName);
+                command.Parameters.AddWithValue("@LastName", lastName);
+                command.Parameters.AddWithValue("@Balance", usersBalance);
+                command.Parameters.AddWithValue("@MonthlyIncome", usersIncome);
+                command.Parameters.AddWithValue("@MonthlyExpenses", usersExpenses);
+
+                try
+                {
+                    int newUserId = (int)command.ExecuteScalar();
+
+                    user.UserId = newUserId;
+                    userList.Add(user);
+
+                    Console.WriteLine("\nNew user successfuly added\nPress enter to return to the main menu");
+                    Console.ReadLine();
+                    //SaveData();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Query failed {ex.Message}");
+                    Console.WriteLine("\nNew user operation failed\nPress enter to return to the main menu");
+                    Console.ReadLine();
+
+                }
+            }
+        }
     }
 
     void UserSummary()
@@ -165,19 +264,19 @@ while (true)
             {
                 if ((userInput <= userList.Count - 1) && (userInput >= 0))
                 {
-                    decimal NetSavings = userList[userInput].MonthlyIncome - userList[userInput].MonthlyExpenses;
-                    int TotalTransactions = userList[userInput].Transactions.Count;
+                    decimal? NetSavings = userList[userInput].MonthlyIncome - userList[userInput].MonthlyExpenses;
+                    int TotalTransactions = userList[userInput].TransactionList.Count;
 
                     decimal LargestExpense = 0m;
-                    foreach (var transaction in userList[userInput].Transactions)
+                    foreach (var transaction in userList[userInput].TransactionList)
                     {
-                        if (transaction.TransactionAmount > LargestExpense)
+                        if (transaction.Amount > LargestExpense)
                         {
-                            LargestExpense = transaction.TransactionAmount;
+                            LargestExpense = transaction.Amount;
                         }
                     }
 
-                    Console.WriteLine($"\nUser: {userList[userInput].UserName}");
+                    Console.WriteLine($"\nUser: {userList[userInput].FirstName} {userList[userInput].LastName}\tUser ID: {userList[userInput].UserId}");
                     Console.WriteLine($"Balance: {userList[userInput].Balance}\n");
 
                     Console.WriteLine($"Monthly income: {userList[userInput].MonthlyIncome}");
@@ -284,15 +383,15 @@ while (true)
 
                     Transaction transaction = new Transaction();
 
-                    transaction.TransactionCategory = purchaseCategory;
-                    transaction.NumericCategory = numericCategory;
+                    //transaction.TransactionCategory = purchaseCategory;
+                    transaction.CategoryId = numericCategory;
                     transaction.TransactionDescription = purchaseDescription;
                     transaction.TransactionDate = transactionDate;
-                    transaction.TransactionAmount = purchaseAmount;
+                    transaction.Amount = purchaseAmount;
 
-                    userList[userInput].Transactions.Add(transaction);
+                    userList[userInput].TransactionList.Add(transaction);
 
-                    SaveData();
+                    //SaveData();
 
                     Console.WriteLine("\nTransaction added\nPress enter to return to the main menu");
                     Console.ReadLine();
@@ -319,6 +418,7 @@ while (true)
 
     void ViewTransactions()
     {
+
         if (!(userList.Count > 0))
         {
             Console.WriteLine("\nThere are no users to add a transaction too. Please add a user first"
@@ -334,13 +434,15 @@ while (true)
 
             if (int.TryParse(Console.ReadLine(), out int userInput) && (userInput <= userList.Count - 1) && (userInput >= 0))
             {
-                if (userList[userInput].Transactions.Count >= 1)
+                if (userList[userInput].TransactionList.Count >= 1)
                 {
                     ViewTransactionHeader();
 
-                    foreach (Transaction transaction in userList[userInput].Transactions)
+
+                    foreach (Transaction transaction in userList[userInput].TransactionList)
                     {
-                        Console.WriteLine($"{transaction.TransactionCategory,-32}{transaction.TransactionDescription,-48}{transaction.TransactionAmount,-32}{transaction.TransactionDate}");
+                        //fix later
+                        Console.WriteLine($"{"temp.TransactionCategoryName",-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
                     }
 
                     Console.WriteLine("\n\nSort by: \n");
@@ -407,20 +509,21 @@ void DeleteTransaction()
     {
         if ((userInput <= userList.Count - 1) && (userInput >= 0))
         {
-            if (userList[userInput].Transactions.Count > 0)
+            if (userList[userInput].TransactionList.Count > 0)
             {
                 ViewTransactionHeader();
 
-                for (int i = 0; i < userList[userInput].Transactions.Count; i++)
+                for (int i = 0; i < userList[userInput].TransactionList.Count; i++)
                 {
-                    Console.WriteLine($"{i}: {userList[userInput].Transactions[i].TransactionCategory,-29}{userList[userInput].Transactions[i].TransactionDescription,-48}{userList[userInput].Transactions[i].TransactionAmount,-32}{userList[userInput].Transactions[i].TransactionDate}");
+                    //fix later
+                    Console.WriteLine($"{i}: {"temp.TransactionCategoryName",-29}{userList[userInput].TransactionList[i].TransactionDescription,-48}{userList[userInput].TransactionList[i].Amount,-32}{userList[userInput].TransactionList[i].TransactionDate}");
                 }
 
                 Console.WriteLine("\nPlease enter the number of the transaction you wish to delete");
 
-                if (int.TryParse(Console.ReadLine(), out int transactionInput) && (transactionInput <= userList[userInput].Transactions.Count - 1) && (transactionInput >= 0))
+                if (int.TryParse(Console.ReadLine(), out int transactionInput) && (transactionInput <= userList[userInput].TransactionList.Count - 1) && (transactionInput >= 0))
                 {
-                    userList[userInput].Transactions.RemoveAt(transactionInput);
+                    userList[userInput].TransactionList.RemoveAt(transactionInput);
                 }
                 else
                 {
@@ -429,7 +532,7 @@ void DeleteTransaction()
                     return;
                 }
 
-                SaveData();
+                //SaveData();
 
                 Console.WriteLine("\nTransaction deleted\nPress enter to return to the menu");
                 Console.ReadLine();
@@ -460,24 +563,25 @@ void DisplayUsers()
 {
     for (int i = 0; i < userList.Count; i++)
     {
-        Console.WriteLine($"{i}: {userList[i].UserName}");
+        Console.WriteLine($"{i}: {userList[i].FirstName} {userList[i].LastName}");
     }
 }
 
-void SaveData()
+/* void SaveData()
 {
     string jsonString = JsonSerializer.Serialize(userList, JsonOptions.Options);
     File.WriteAllText(fileName, jsonString);
-}
+} */
 
 void FilterTransactions(int userInput, int categoryChoice)
 {
     ViewTransactionHeader();
-    foreach (Transaction transaction in userList[userInput].Transactions)
+    foreach (Transaction transaction in userList[userInput].TransactionList)
     {
-        if (transaction.NumericCategory == categoryChoice)
+        if (transaction.CategoryId == categoryChoice)
         {
-            Console.WriteLine($"{transaction.TransactionCategory,-32}{transaction.TransactionDescription,-48}{transaction.TransactionAmount,-32}{transaction.TransactionDate}");
+            //fix later
+            Console.WriteLine($"{"temp.transactionCategoryName",-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
         }
     }
     Console.WriteLine("\nPress enter to return to the main menu\n");
@@ -492,20 +596,24 @@ void ViewTransactionHeader()
 
 class Transaction
 {
-    public string? TransactionCategory { get; set; }
-    public int NumericCategory { get; set; }
-    public string? TransactionDescription { get; set; }
+    public int TransactionId { get; set; }
+    public decimal Amount { get; set; }
+    public int UserId { get; set; }
+    //public string? TransactionCategory { get; set; }
+    public int CategoryId { get; set; }
     public DateOnly TransactionDate { get; set; }
-    public decimal TransactionAmount { get; set; }
+    public string? TransactionDescription { get; set; }
 }
 
 class User
 {
-    public string? UserName { get; set; }
+    public int UserId { get; set; }
+    public string? FirstName { get; set; }
+    public string? LastName { get; set; }
     public decimal Balance { get; set; }
     public decimal MonthlyIncome { get; set; }
     public decimal MonthlyExpenses { get; set; }
-    public List<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public List<Transaction> TransactionList { get; set; } = new List<Transaction>();
 }
 
 class JsonOptions
