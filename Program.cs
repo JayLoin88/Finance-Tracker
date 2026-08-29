@@ -130,7 +130,7 @@ while (true)
     Console.WriteLine("1. Add user");
     Console.WriteLine("2. User summary");
     Console.WriteLine("3. Add transaction");
-    Console.WriteLine("4. View all transactions");
+    Console.WriteLine("4. View a users transactions");
     Console.WriteLine("5. Delete a transaction");
     Console.WriteLine("6. Exit\n");
 
@@ -315,6 +315,7 @@ while (true)
 
             if (int.TryParse(Console.ReadLine(), out int userInput) && (userInput <= userList.Count - 1) && (userInput >= 0))
             {
+
                 Console.WriteLine("\nPlease enter the transaction category\n");
 
                 string purchaseCategory;
@@ -362,7 +363,7 @@ while (true)
                 }
 
                 Console.WriteLine("\nPlease enter a description for the transaction");
-                string? purchaseDescription = Console.ReadLine();
+                string? transactionDescription = Console.ReadLine();
 
                 Console.WriteLine("\nPlease enter the date of the transaction (Format: MM/DD/YYYY)");
                 string? purchaseDate = Console.ReadLine();
@@ -378,29 +379,74 @@ while (true)
                 }
 
                 Console.WriteLine("\nPlease enter the transaction amount");
-                if (decimal.TryParse(Console.ReadLine(), out decimal purchaseAmount))
-                {
-
-                    Transaction transaction = new Transaction();
-
-                    //transaction.TransactionCategory = purchaseCategory;
-                    transaction.CategoryId = numericCategory;
-                    transaction.TransactionDescription = purchaseDescription;
-                    transaction.TransactionDate = transactionDate;
-                    transaction.Amount = purchaseAmount;
-
-                    userList[userInput].TransactionList.Add(transaction);
-
-                    //SaveData();
-
-                    Console.WriteLine("\nTransaction added\nPress enter to return to the main menu");
-                    Console.ReadLine();
-                }
-                else
+                if (!decimal.TryParse(Console.ReadLine(), out decimal purchaseAmount))
                 {
                     Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
                     Console.ReadLine();
+                    return;
                 }
+
+                Transaction transaction = new Transaction();
+
+                //transaction.TransactionCategory = purchaseCategory;
+                transaction.Amount = purchaseAmount;
+                transaction.UserId = userList[userInput].UserId;
+                transaction.CategoryId = numericCategory;
+                transaction.TransactionDate = transactionDate;
+                transaction.TransactionDescription = transactionDescription;
+
+                string addTransactionQuery = "INSERT INTO Transactions (Amount, UserId, CategoryId, TransactionDate, TransactionDescription) " +
+                                            "OUTPUT INSERTED.TransactionId " +
+                                            "VALUES (@Amount, @UserId, @CategoryId, @TransactionDate, @TransactionDescription)";
+
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    try
+                    {
+                        connection.Open();
+                        Console.WriteLine("Connection Successful");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Connection failed: {ex.Message}");
+                        return;
+                    }
+
+                    using (SqlCommand command = new SqlCommand(addTransactionQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@Amount", transaction.Amount);
+                        command.Parameters.AddWithValue("@UserId", transaction.UserId);
+                        command.Parameters.AddWithValue("@CategoryId", transaction.CategoryId);
+                        command.Parameters.AddWithValue("@TransactionDate", transaction.TransactionDate);
+                        command.Parameters.AddWithValue("@TransactionDescription", transaction.TransactionDescription);
+
+                        try
+                        {
+                            int newTransactionId = (int)command.ExecuteScalar();
+
+                            transaction.TransactionId = newTransactionId;
+                            userList[userInput].TransactionList.Add(transaction);
+
+                            Console.WriteLine("\nNew transaction successfuly added\nPress enter to return to the main menu");
+                            Console.ReadLine();
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Query failed {ex.Message}");
+                            Console.WriteLine("\nNew transaction operation failed\nPress enter to return to the main menu");
+                            Console.ReadLine();
+                            return;
+
+                        }
+                    }
+                }
+
+                //userList[userInput].TransactionList.Add(transaction);
+
+                //SaveData();
+
+                //Console.WriteLine("\nTransaction added\nPress enter to return to the main menu");
+                //Console.ReadLine();
             }
             else
             {
@@ -489,73 +535,118 @@ while (true)
             }
         }
     }
-}
 
-void DeleteTransaction()
-{
-    if (userList.Count > 0)
+    void DeleteTransaction()
     {
-        Console.WriteLine("Please enter which user you wish to delete a transaction from");
-        DisplayUsers();
-    }
-    else
-    {
-        Console.WriteLine("There are no users to delete a transaction from\nPress enter to return to the main menu");
-        Console.ReadLine();
-        return;
-    }
-
-    if (int.TryParse(Console.ReadLine(), out int userInput))
-    {
-        if ((userInput <= userList.Count - 1) && (userInput >= 0))
+        if (userList.Count > 0)
         {
-            if (userList[userInput].TransactionList.Count > 0)
+            Console.WriteLine("Please enter which user you wish to delete a transaction from");
+            DisplayUsers();
+        }
+        else
+        {
+            Console.WriteLine("There are no users to delete a transaction from\nPress enter to return to the main menu");
+            Console.ReadLine();
+            return;
+        }
+
+        if (int.TryParse(Console.ReadLine(), out int userInput))
+        {
+            if ((userInput <= userList.Count - 1) && (userInput >= 0))
             {
-                ViewTransactionHeader();
-
-                for (int i = 0; i < userList[userInput].TransactionList.Count; i++)
+                if (userList[userInput].TransactionList.Count > 0)
                 {
-                    //fix later
-                    Console.WriteLine($"{i}: {"temp.TransactionCategoryName",-29}{userList[userInput].TransactionList[i].TransactionDescription,-48}{userList[userInput].TransactionList[i].Amount,-32}{userList[userInput].TransactionList[i].TransactionDate}");
-                }
+                    ViewTransactionHeader();
 
-                Console.WriteLine("\nPlease enter the number of the transaction you wish to delete");
+                    for (int i = 0; i < userList[userInput].TransactionList.Count; i++)
+                    {
+                        //fix later
+                        Console.WriteLine($"{i}: {"temp.TransactionCategoryName",-29}{userList[userInput].TransactionList[i].TransactionDescription,-48}{userList[userInput].TransactionList[i].Amount,-32}{userList[userInput].TransactionList[i].TransactionDate}");
+                    }
 
-                if (int.TryParse(Console.ReadLine(), out int transactionInput) && (transactionInput <= userList[userInput].TransactionList.Count - 1) && (transactionInput >= 0))
-                {
-                    userList[userInput].TransactionList.RemoveAt(transactionInput);
+                    Console.WriteLine("\nPlease enter the number of the transaction you wish to delete");
+
+                    if (!int.TryParse(Console.ReadLine(), out int transactionInput) || !(transactionInput <= userList[userInput].TransactionList.Count - 1) || !(transactionInput >= 0))
+                    {
+                        Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
+                        Console.ReadLine();
+                        return;
+                    }
+
+                    string deleteTransactionQuery = "DELETE FROM Transactions " +
+                                                    "WHERE TransactionId = @TransactionId";
+
+                    int TransactionId = userList[userInput].TransactionList[transactionInput].TransactionId;
+
+                    using (SqlConnection connection = new SqlConnection(connectionString))
+                    {
+                        try
+                        {
+                            connection.Open();
+                            Console.WriteLine("Connection Successful");
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine(ex.Message);
+                            Console.WriteLine("Connection failure");
+                            return;
+                        }
+
+                        using (SqlCommand command = new SqlCommand(deleteTransactionQuery, connection))
+                        {
+                            command.Parameters.AddWithValue("@TransactionId", TransactionId);
+
+                            try
+                            {
+                                int rowsAffected = command.ExecuteNonQuery();
+
+                                if (rowsAffected == 1)
+                                {
+                                    userList[userInput].TransactionList.RemoveAt(transactionInput);
+
+                                    Console.WriteLine("\nTransaction deleted\nPress enter to return to the menu");
+                                    Console.ReadLine();
+                                }
+                                else
+                                {
+                                    Console.WriteLine("Transaction failed to delete\nPress enter to return to the main menu.");
+                                    Console.ReadLine();
+                                    return;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Query failed {ex.Message}");
+                                Console.WriteLine("\nDelete transaction operation failed\nPress enter to return to the main menu");
+                                Console.ReadLine();
+                                return;
+
+                            }
+                        }
+                    }
+
+                    //SaveData();
                 }
                 else
                 {
-                    Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
+                    Console.WriteLine("\nThere are no available transactions\nPress enter to return to the menu");
                     Console.ReadLine();
                     return;
                 }
-
-                //SaveData();
-
-                Console.WriteLine("\nTransaction deleted\nPress enter to return to the menu");
-                Console.ReadLine();
             }
             else
             {
-                Console.WriteLine("\nThere are no available transactions\nPress enter to return to the menu");
+                Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
                 Console.ReadLine();
                 return;
             }
         }
         else
         {
-            Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
+            Console.WriteLine("\nInvalid input\nPress enter to return to the main menu");
             Console.ReadLine();
             return;
         }
-    }
-    else
-    {
-        Console.WriteLine("\nInvalid input\nPress enter to return to the main menu");
-        Console.ReadLine();
-        return;
     }
 }
 
