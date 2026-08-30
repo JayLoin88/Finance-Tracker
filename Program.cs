@@ -2,17 +2,20 @@
 using Microsoft.Data.SqlClient;
 
 List<User> userList = new List<User>();
+List<Category> categoryList = new List<Category>();
 
 string connectionString = "Server=localhost;Database=FinanceTracker;Integrated Security=True;TrustServerCertificate=True;";
-string startQuery = "SELECT UserId, FirstName, LastName, Balance, MonthlyIncome, MonthlyExpenses FROM Users";
-string viewTransactionQuery = "SELECT TransactionId, Amount, UserId, CategoryId, TransactionDate, TransactionDescription FROM Transactions";
+
+string loadUsersQuery = "SELECT UserId, FirstName, LastName, Balance, MonthlyIncome, MonthlyExpenses FROM Users";
+string loadTransactionsQuery = "SELECT TransactionId, Amount, UserId, CategoryId, TransactionDate, TransactionDescription FROM Transactions";
+string loadCategoriesQuery = "SELECT CategoryId, CategoryName FROM Categories ORDER BY CategoryId";
 
 /* string fileName = "FinanceTracker.json";
 string backupFile = "FinanceTracker.backup.json"; */
 
 using (SqlConnection connection = new SqlConnection(connectionString))
 {
-    using (SqlCommand command = new SqlCommand(startQuery, connection))
+    using (SqlCommand loadUsersCommand = new SqlCommand(loadUsersQuery, connection))
     {
         try
         {
@@ -25,7 +28,7 @@ using (SqlConnection connection = new SqlConnection(connectionString))
             return;
         }
 
-        using (SqlDataReader reader = command.ExecuteReader())
+        using (SqlDataReader reader = loadUsersCommand.ExecuteReader())
         {
             while (reader.Read())
             {
@@ -52,9 +55,9 @@ using (SqlConnection connection = new SqlConnection(connectionString))
     }
 
 
-    using (SqlCommand addTransactions = new SqlCommand(viewTransactionQuery, connection))
+    using (SqlCommand loadTransactionsCommand = new SqlCommand(loadTransactionsQuery, connection))
     {
-        using (SqlDataReader reader = addTransactions.ExecuteReader())
+        using (SqlDataReader reader = loadTransactionsCommand.ExecuteReader())
         {
             while (reader.Read())
             {
@@ -86,7 +89,33 @@ using (SqlConnection connection = new SqlConnection(connectionString))
             }
         }
     }
+
+    using (SqlCommand loadCategoriesCommand = new SqlCommand(loadCategoriesQuery, connection))
+    {
+        using (SqlDataReader reader = loadCategoriesCommand.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                int CategoryId = reader.GetInt32(0);
+                string CategoryName = reader.GetString(1);
+
+                Category category = new Category();
+
+                category.CategoryId = CategoryId;
+                category.CategoryName = CategoryName;
+
+                categoryList.Add(category);
+            }
+        }
+    }
+
+    // temp display at start, will remove in final ver.
     DisplayUsers();
+
+    foreach (Category category in categoryList)
+    {
+        Console.WriteLine($"{category.CategoryId} {category.CategoryName}");
+    }
 }
 
 /* if (File.Exists(fileName))
@@ -316,51 +345,28 @@ while (true)
             if (int.TryParse(Console.ReadLine(), out int userInput) && (userInput <= userList.Count - 1) && (userInput >= 0))
             {
 
+                if (categoryList.Count == 0)
+                {
+                    Console.WriteLine("There are no categories available\nPress enter to return to the main menu");
+                    Console.ReadLine();
+                    return;
+                }
+
                 Console.WriteLine("\nPlease enter the transaction category\n");
 
-                string purchaseCategory;
-                int numericCategory;
-
-                Console.WriteLine("1. Food and Dining");
-                Console.WriteLine("2. Housing and Living");
-                Console.WriteLine("3. Health");
-                Console.WriteLine("4. Personal Care or Lifestyle");
-                Console.WriteLine("5. Financial or Debt");
-                Console.WriteLine("6. Other\n");
-
-                string? categoryChoice = Console.ReadLine();
-
-                switch (categoryChoice)
+                for (int i = 0; i < categoryList.Count; i++)
                 {
-                    case "1":
-                        purchaseCategory = "Food and Dining";
-                        numericCategory = 1;
-                        break;
-                    case "2":
-                        purchaseCategory = "House and Living";
-                        numericCategory = 2;
-                        break;
-                    case "3":
-                        purchaseCategory = "Health";
-                        numericCategory = 3;
-                        break;
-                    case "4":
-                        purchaseCategory = "Personal Care or Lifestyle";
-                        numericCategory = 4;
-                        break;
-                    case "5":
-                        purchaseCategory = "Financial or Debt";
-                        numericCategory = 5;
-                        break;
-                    case "6":
-                        purchaseCategory = "Other";
-                        numericCategory = 6;
-                        break;
-                    default:
-                        Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
-                        Console.ReadLine();
-                        return;
+                    Console.WriteLine($"{i + 1} {categoryList[i].CategoryName}");
                 }
+
+                if ((!int.TryParse(Console.ReadLine(), out int categoryChoice)) || categoryChoice < 1 || categoryChoice > categoryList.Count)
+                {
+                    Console.WriteLine("\nInvalid input\nPress enter to return to the main menu");
+                    Console.ReadLine();
+                    return;
+                }
+
+                Category selectedCategory = categoryList[categoryChoice - 1];
 
                 Console.WriteLine("\nPlease enter a description for the transaction");
                 string? transactionDescription = Console.ReadLine();
@@ -388,10 +394,9 @@ while (true)
 
                 Transaction transaction = new Transaction();
 
-                //transaction.TransactionCategory = purchaseCategory;
                 transaction.Amount = purchaseAmount;
                 transaction.UserId = userList[userInput].UserId;
-                transaction.CategoryId = numericCategory;
+                transaction.CategoryId = selectedCategory.CategoryId;
                 transaction.TransactionDate = transactionDate;
                 transaction.TransactionDescription = transactionDescription;
 
@@ -440,13 +445,6 @@ while (true)
                         }
                     }
                 }
-
-                //userList[userInput].TransactionList.Add(transaction);
-
-                //SaveData();
-
-                //Console.WriteLine("\nTransaction added\nPress enter to return to the main menu");
-                //Console.ReadLine();
             }
             else
             {
@@ -487,38 +485,52 @@ while (true)
 
                     foreach (Transaction transaction in userList[userInput].TransactionList)
                     {
-                        //fix later
-                        Console.WriteLine($"{"temp.TransactionCategoryName",-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
+                        Category? selectedCategory = null;
+
+                        foreach (Category category in categoryList)
+                        {
+                            if (transaction.CategoryId == category.CategoryId)
+                            {
+                                selectedCategory = category;
+                                break;
+                            }
+                        }
+
+                        if (selectedCategory == null)
+                        {
+                            Console.WriteLine("Category not found");
+                            continue;
+                        }
+
+                        Console.WriteLine($"{selectedCategory.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
                     }
 
-                    Console.WriteLine("\n\nSort by: \n");
-                    Console.WriteLine("1. Food and Dining");
-                    Console.WriteLine("2. Housing and Living");
-                    Console.WriteLine("3. Health");
-                    Console.WriteLine("4. Personal Care or Lifestyle");
-                    Console.WriteLine("5. Financial or Debt");
-                    Console.WriteLine("6. Other\n");
-                    Console.WriteLine("7. Exit\n");
-
-
-                    int.TryParse(Console.ReadLine(), out int categoryChoice);
-
-                    if (categoryChoice < 7)
+                    Console.WriteLine();
+                    
+                    int count = 1;
+                    foreach (Category category in categoryList)
                     {
-                        FilterTransactions(userInput, categoryChoice);
-                        return;
+                        Console.WriteLine($"{count}. {category.CategoryName}");
+                        count++;
                     }
-                    else if (categoryChoice == 7)
-                    {
-                        return;
-                    }
-                    else
+
+                    Console.WriteLine($"\n{count}. Exit\n");
+
+                    if ((!int.TryParse(Console.ReadLine(), out int categoryChoice)) || categoryChoice < 1 || categoryChoice > count)
                     {
                         Console.WriteLine("Invalid input\nPress enter to return to the main menu");
                         Console.ReadLine();
                         return;
                     }
+                    else if (categoryChoice == count)
+                    {
+                        return;
+                    }
 
+                    Category selectedFilterCategory = categoryList[categoryChoice - 1];
+
+                    FilterTransactions(userInput, selectedFilterCategory.CategoryId);
+                    return;
                 }
                 else
                 {
@@ -664,15 +676,31 @@ void DisplayUsers()
     File.WriteAllText(fileName, jsonString);
 } */
 
-void FilterTransactions(int userInput, int categoryChoice)
+void FilterTransactions(int userInput, int categoryId)
 {
+    Category? selectedCategory = null;
+
+    foreach (Category category in categoryList)
+    {
+        if (category.CategoryId == categoryId)
+        {
+            selectedCategory = category;
+            break;
+        }
+    }
+
+    if (selectedCategory == null)
+    {
+        Console.WriteLine("Category not found");
+        return;
+    }
+
     ViewTransactionHeader();
     foreach (Transaction transaction in userList[userInput].TransactionList)
     {
-        if (transaction.CategoryId == categoryChoice)
+        if (transaction.CategoryId == categoryId)
         {
-            //fix later
-            Console.WriteLine($"{"temp.transactionCategoryName",-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
+            Console.WriteLine($"{selectedCategory.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
         }
     }
     Console.WriteLine("\nPress enter to return to the main menu\n");
@@ -685,17 +713,6 @@ void ViewTransactionHeader()
     Console.WriteLine("-------------------------------------------------------------------------------------------------------------------------------------------");
 }
 
-class Transaction
-{
-    public int TransactionId { get; set; }
-    public decimal Amount { get; set; }
-    public int UserId { get; set; }
-    //public string? TransactionCategory { get; set; }
-    public int CategoryId { get; set; }
-    public DateOnly TransactionDate { get; set; }
-    public string? TransactionDescription { get; set; }
-}
-
 class User
 {
     public int UserId { get; set; }
@@ -705,6 +722,22 @@ class User
     public decimal MonthlyIncome { get; set; }
     public decimal MonthlyExpenses { get; set; }
     public List<Transaction> TransactionList { get; set; } = new List<Transaction>();
+}
+
+class Transaction
+{
+    public int TransactionId { get; set; }
+    public decimal Amount { get; set; }
+    public int UserId { get; set; }
+    public int CategoryId { get; set; }
+    public DateOnly TransactionDate { get; set; }
+    public string? TransactionDescription { get; set; }
+}
+
+class Category
+{
+    public int CategoryId { get; set; }
+    public string? CategoryName { get; set; }
 }
 
 class JsonOptions
