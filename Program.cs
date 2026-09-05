@@ -478,66 +478,116 @@ while (true)
 
             if (int.TryParse(Console.ReadLine(), out int userInput) && (userInput <= userList.Count - 1) && (userInput >= 0))
             {
-                if (userList[userInput].TransactionList.Count >= 1)
+                //if (userList[userInput].TransactionList.Count >= 1)
+                //{
+                int selectedUserId = userList[userInput].UserId;
+
+                string viewTransactionsQuery = "SELECT Transactions.Amount, Categories.CategoryName, Transactions.TransactionDate, Transactions.TransactionDescription " +
+                                                "FROM Transactions " +
+                                                "INNER JOIN Categories " +
+                                                "ON Transactions.CategoryId = Categories.CategoryId " +
+                                                "WHERE Transactions.UserId = @UserId";
+
+                using (SqlConnection connection = new SqlConnection(connectionString))
                 {
-                    ViewTransactionHeader();
-
-
-                    foreach (Transaction transaction in userList[userInput].TransactionList)
+                    using (SqlCommand viewTransactionCommand = new SqlCommand(viewTransactionsQuery, connection))
                     {
-                        Category? selectedCategory = null;
+                        viewTransactionCommand.Parameters.AddWithValue("@UserId", selectedUserId);
 
-                        foreach (Category category in categoryList)
+                        try
                         {
-                            if (transaction.CategoryId == category.CategoryId)
+                            connection.Open();
+
+                            ViewTransactionHeader();
+
+                            bool transactionsFound = false;
+
+                            using (SqlDataReader reader = viewTransactionCommand.ExecuteReader())
                             {
-                                selectedCategory = category;
-                                break;
+                                while (reader.Read())
+                                {
+                                    decimal amount = reader.GetDecimal(0);
+                                    string categoryName = reader.GetString(1);
+                                    DateTime fullDateTime = reader.GetDateTime(2);
+                                    DateOnly transactionDate = DateOnly.FromDateTime(fullDateTime);
+                                    string transactionDescription = reader.GetString(3);
+
+                                    Console.WriteLine($"{categoryName,-32}{transactionDescription,-48}{amount,-32}{transactionDate}");
+
+                                    transactionsFound = true;
+                                }
+
+                                if (!transactionsFound)
+                                {
+                                    Console.WriteLine("There are no transactions saved to this user\nPress enter to return to the main menu");
+                                    Console.ReadLine();
+                                    return;
+                                }
                             }
                         }
-
-                        if (selectedCategory == null)
+                        catch (Exception ex)
                         {
-                            Console.WriteLine("Category not found");
-                            continue;
+                            Console.WriteLine($"Operation failure: {ex.Message}");
+                            return;
                         }
-
-                        Console.WriteLine($"{selectedCategory.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
                     }
+                }
 
-                    Console.WriteLine();
-                    
-                    int count = 1;
+                /* foreach (Transaction transaction in userList[userInput].TransactionList)
+                {
+                    Category? selectedCategory = null;
+
                     foreach (Category category in categoryList)
                     {
-                        Console.WriteLine($"{count}. {category.CategoryName}");
-                        count++;
+                        if (transaction.CategoryId == category.CategoryId)
+                        {
+                            selectedCategory = category;
+                            break;
+                        }
                     }
 
-                    Console.WriteLine($"\n{count}. Exit\n");
-
-                    if ((!int.TryParse(Console.ReadLine(), out int categoryChoice)) || categoryChoice < 1 || categoryChoice > count)
+                    if (selectedCategory == null)
                     {
-                        Console.WriteLine("Invalid input\nPress enter to return to the main menu");
-                        Console.ReadLine();
-                        return;
-                    }
-                    else if (categoryChoice == count)
-                    {
-                        return;
+                        Console.WriteLine("Category not found");
+                        continue;
                     }
 
-                    Category selectedFilterCategory = categoryList[categoryChoice - 1];
+                    Console.WriteLine($"{selectedCategory.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
+                } */
 
-                    FilterTransactions(userInput, selectedFilterCategory.CategoryId);
-                    return;
-                }
-                else
+                Console.WriteLine();
+
+                int count = 1;
+                foreach (Category category in categoryList)
                 {
-                    Console.WriteLine("\nThere are no transactions saved\nPress enter to return to the main menu");
+                    Console.WriteLine($"{count}. {category.CategoryName}");
+                    count++;
+                }
+
+                Console.WriteLine($"\n{count}. Exit\n");
+
+                if ((!int.TryParse(Console.ReadLine(), out int categoryChoice)) || categoryChoice < 1 || categoryChoice > count)
+                {
+                    Console.WriteLine("Invalid input\nPress enter to return to the main menu");
                     Console.ReadLine();
                     return;
                 }
+                else if (categoryChoice == count)
+                {
+                    return;
+                }
+
+                Category selectedFilterCategory = categoryList[categoryChoice - 1];
+
+                FilterTransactions(userInput, selectedFilterCategory.CategoryId);
+                return;
+                //}
+                //else
+                //{
+                //    Console.WriteLine("\nThere are no transactions saved\nPress enter to return to the main menu");
+                //    Console.ReadLine();
+                //    return;
+                //}
             }
             else
             {
@@ -572,8 +622,26 @@ while (true)
 
                     for (int i = 0; i < userList[userInput].TransactionList.Count; i++)
                     {
-                        //fix later
-                        Console.WriteLine($"{i}: {"temp.TransactionCategoryName",-29}{userList[userInput].TransactionList[i].TransactionDescription,-48}{userList[userInput].TransactionList[i].Amount,-32}{userList[userInput].TransactionList[i].TransactionDate}");
+                        Transaction transaction = userList[userInput].TransactionList[i];
+
+                        Category? selectedCategory = null;
+
+                        foreach (Category category in categoryList)
+                        {
+                            if (transaction.CategoryId == category.CategoryId)
+                            {
+                                selectedCategory = category;
+                                break;
+                            }
+                        }
+
+                        if (selectedCategory == null)
+                        {
+                            Console.WriteLine("Category not found");
+                            continue;
+                        }
+
+                        Console.WriteLine($"{i}: {selectedCategory.CategoryName,-29}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
                     }
 
                     Console.WriteLine("\nPlease enter the number of the transaction you wish to delete");
