@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using System.Data;
+using System.Text.Json;
 using Microsoft.Data.SqlClient;
 
 List<User> userList = new List<User>();
@@ -268,7 +269,6 @@ while (true)
 
                     Console.WriteLine("\nNew user successfuly added\nPress enter to return to the main menu");
                     Console.ReadLine();
-                    //SaveData();
                 }
                 catch (Exception ex)
                 {
@@ -478,8 +478,6 @@ while (true)
 
             if (int.TryParse(Console.ReadLine(), out int userInput) && (userInput <= userList.Count - 1) && (userInput >= 0))
             {
-                //if (userList[userInput].TransactionList.Count >= 1)
-                //{
                 int selectedUserId = userList[userInput].UserId;
 
                 string viewTransactionsQuery = "SELECT Transactions.Amount, Categories.CategoryName, Transactions.TransactionDate, Transactions.TransactionDescription " +
@@ -533,28 +531,6 @@ while (true)
                     }
                 }
 
-                /* foreach (Transaction transaction in userList[userInput].TransactionList)
-                {
-                    Category? selectedCategory = null;
-
-                    foreach (Category category in categoryList)
-                    {
-                        if (transaction.CategoryId == category.CategoryId)
-                        {
-                            selectedCategory = category;
-                            break;
-                        }
-                    }
-
-                    if (selectedCategory == null)
-                    {
-                        Console.WriteLine("Category not found");
-                        continue;
-                    }
-
-                    Console.WriteLine($"{selectedCategory.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
-                } */
-
                 Console.WriteLine();
 
                 int count = 1;
@@ -581,13 +557,6 @@ while (true)
 
                 FilterTransactions(userInput, selectedFilterCategory.CategoryId);
                 return;
-                //}
-                //else
-                //{
-                //    Console.WriteLine("\nThere are no transactions saved\nPress enter to return to the main menu");
-                //    Console.ReadLine();
-                //    return;
-                //}
             }
             else
             {
@@ -746,31 +715,88 @@ void DisplayUsers()
 
 void FilterTransactions(int userInput, int categoryId)
 {
-    Category? selectedCategory = null;
+    string filterTransactionCategory = "SELECT Transactions.Amount, Transactions.TransactionDate, Transactions.TransactionDescription, Categories.CategoryName " +
+                                        "From Transactions " +
+                                        "INNER JOIN Categories " +
+                                        "ON Transactions.CategoryId = Categories.CategoryId " +
+                                        "WHERE Transactions.UserId = @UserId AND Transactions.CategoryId = @CategoryId";
 
-    foreach (Category category in categoryList)
+    int selectedUserId = userList[userInput].UserId;
+
+    using (SqlConnection connection = new SqlConnection(connectionString))
     {
-        if (category.CategoryId == categoryId)
+        using (SqlCommand filterTransactionCommand = new SqlCommand(filterTransactionCategory, connection))
         {
-            selectedCategory = category;
-            break;
+            filterTransactionCommand.Parameters.AddWithValue("@UserId", selectedUserId);
+            filterTransactionCommand.Parameters.AddWithValue("@CategoryId", categoryId);
+
+            try
+            {
+                connection.Open();
+                Console.WriteLine("Connection Successful");
+
+                ViewTransactionHeader();
+
+                bool filteredTransactionsFound = false;
+
+                using (SqlDataReader reader = filterTransactionCommand.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        decimal amount = reader.GetDecimal(0);
+                        DateTime fullTransactionDate = reader.GetDateTime(1);
+                        DateOnly transactionDate = DateOnly.FromDateTime(fullTransactionDate);
+                        string transactionDescription = reader.GetString(2);
+                        string categoryName = reader.GetString(3);
+
+                        Console.WriteLine($"{categoryName,-32}{transactionDescription,-48}{amount,-32}{transactionDate}");
+
+                        filteredTransactionsFound = true;
+                    }
+
+                    if (!filteredTransactionsFound)
+                    {
+                        Console.WriteLine("There are no transactions under this category saved to this user");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Operation failure: {ex.Message}");
+                return;
+            }
         }
     }
 
-    if (selectedCategory == null)
-    {
-        Console.WriteLine("Category not found");
-        return;
-    }
+        // Previous code - will be removed later
 
-    ViewTransactionHeader();
-    foreach (Transaction transaction in userList[userInput].TransactionList)
-    {
-        if (transaction.CategoryId == categoryId)
-        {
-            Console.WriteLine($"{selectedCategory.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
-        }
-    }
+            /* Category? selectedCategory = null;
+
+            foreach (Category category in categoryList)
+            {
+                if (category.CategoryId == categoryId)
+                {
+                    selectedCategory = category;
+                    break;
+                }
+            }
+
+            if (selectedCategory == null)
+            {
+                Console.WriteLine("Category not found");
+                return;
+            }
+
+            ViewTransactionHeader();
+            foreach (Transaction transaction in userList[userInput].TransactionList)
+            {
+                if (transaction.CategoryId == categoryId)
+                {
+                    Console.WriteLine($"{selectedCategory.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
+                }
+            }
+            */
+
     Console.WriteLine("\nPress enter to return to the main menu\n");
     Console.ReadLine();
 }
