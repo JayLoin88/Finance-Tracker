@@ -293,8 +293,71 @@ while (true)
             {
                 if ((userInput <= userList.Count - 1) && (userInput >= 0))
                 {
-                    decimal? NetSavings = userList[userInput].MonthlyIncome - userList[userInput].MonthlyExpenses;
-                    int TotalTransactions = userList[userInput].TransactionList.Count;
+                    string userSummaryQuery = "SELECT Users.FirstName, Users.LastName, Users.UserId, Users.Balance, Users.MonthlyIncome, Users.MonthlyExpenses, " +
+                                                "COUNT(Transactions.TransactionId) AS TotalTransactions, ISNULL(MAX(Transactions.Amount), 0) AS LargestExpense " +
+                                                "FROM Users " +
+                                                "LEFT OUTER JOIN Transactions ON Transactions.UserId = Users.UserId " +
+                                                "WHERE Users.UserId = @UserId " +
+                                                "GROUP BY Users.FirstName, Users.LastName, Users.UserId, Users.Balance, Users.MonthlyIncome, Users.MonthlyExpenses";
+
+                    int selectedUserId = userList[userInput].UserId;
+
+                    using (SqlConnection connection = new SqlConnection(connectionString))
+                    {
+                        using (SqlCommand userSummaryCommand = new SqlCommand(userSummaryQuery, connection))
+                        {
+                            userSummaryCommand.Parameters.AddWithValue("@UserId", selectedUserId);
+
+                            try
+                            {
+                                connection.Open();
+                                Console.WriteLine("Connection successful");
+
+                                using (SqlDataReader reader = userSummaryCommand.ExecuteReader())
+                                {
+                                    if (reader.Read()) // because only one row will be read - used 'if' instead of 'while'
+                                    {
+                                        string firstName = reader.GetString(0);
+                                        string lastName = reader.GetString(1);
+                                        int userId = reader.GetInt32(2);
+                                        decimal balance = reader.GetDecimal(3);
+                                        decimal monthlyIncome = reader.GetDecimal(4);
+                                        decimal monthlyExpenses = reader.GetDecimal(5);
+                                        int totalTransactions = reader.GetInt32(6);
+                                        decimal largestExpense = reader.GetDecimal(7);
+
+
+                                        decimal NetSavings = monthlyIncome - monthlyExpenses;
+
+                                        Console.WriteLine($"\nUser: {firstName} {lastName}\tUser ID: {userId}");
+                                        Console.WriteLine($"Balance: {balance}\n");
+
+                                        Console.WriteLine($"Monthly income: {monthlyIncome}");
+                                        Console.WriteLine($"Monthly expenses: {monthlyExpenses}");
+                                        Console.WriteLine($"Net savings: {NetSavings}\n");
+
+                                        Console.WriteLine($"Total transactions: {totalTransactions}");
+                                        Console.WriteLine($"Largest expense: {largestExpense}\n\n");
+                                    }
+                                    else
+                                    {
+                                        Console.WriteLine("User not found or no longer exists. Please reload the application");
+                                        Console.WriteLine("Press enter to return to the main menu");
+                                        Console.ReadLine();
+                                        return;
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Operation failure {ex.Message}\nPress enter to return to the main menu");
+                                Console.ReadLine();
+                                return;
+                            }
+                        }
+                    }
+
+                    /* int TotalTransactions = userList[userInput].TransactionList.Count;
 
                     decimal LargestExpense = 0m;
                     foreach (var transaction in userList[userInput].TransactionList)
@@ -303,18 +366,7 @@ while (true)
                         {
                             LargestExpense = transaction.Amount;
                         }
-                    }
-
-                    Console.WriteLine($"\nUser: {userList[userInput].FirstName} {userList[userInput].LastName}\tUser ID: {userList[userInput].UserId}");
-                    Console.WriteLine($"Balance: {userList[userInput].Balance}\n");
-
-                    Console.WriteLine($"Monthly income: {userList[userInput].MonthlyIncome}");
-                    Console.WriteLine($"Monthly expenses: {userList[userInput].MonthlyExpenses}");
-                    Console.WriteLine($"Net savings: {NetSavings}\n");
-
-                    Console.WriteLine($"Total transactions: {TotalTransactions}");
-                    Console.WriteLine($"Largest expense: {LargestExpense}\n\n");
-
+                    } */
 
                     Console.WriteLine("Press enter to return to the main menu");
                     Console.ReadLine();
@@ -768,34 +820,34 @@ void FilterTransactions(int userInput, int categoryId)
         }
     }
 
-        // Previous code - will be removed later
+    // Previous code - will be removed later
 
-            /* Category? selectedCategory = null;
+    /* Category? selectedCategory = null;
 
-            foreach (Category category in categoryList)
-            {
-                if (category.CategoryId == categoryId)
-                {
-                    selectedCategory = category;
-                    break;
-                }
-            }
+    foreach (Category category in categoryList)
+    {
+        if (category.CategoryId == categoryId)
+        {
+            selectedCategory = category;
+            break;
+        }
+    }
 
-            if (selectedCategory == null)
-            {
-                Console.WriteLine("Category not found");
-                return;
-            }
+    if (selectedCategory == null)
+    {
+        Console.WriteLine("Category not found");
+        return;
+    }
 
-            ViewTransactionHeader();
-            foreach (Transaction transaction in userList[userInput].TransactionList)
-            {
-                if (transaction.CategoryId == categoryId)
-                {
-                    Console.WriteLine($"{selectedCategory.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
-                }
-            }
-            */
+    ViewTransactionHeader();
+    foreach (Transaction transaction in userList[userInput].TransactionList)
+    {
+        if (transaction.CategoryId == categoryId)
+        {
+            Console.WriteLine($"{selectedCategory.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
+        }
+    }
+    */
 
     Console.WriteLine("\nPress enter to return to the main menu\n");
     Console.ReadLine();
