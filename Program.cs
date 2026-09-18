@@ -1,6 +1,4 @@
-﻿using System.Data;
-using System.Text.Json;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 
 List<User> userList = new List<User>();
 List<Category> categoryList = new List<Category>();
@@ -10,9 +8,6 @@ string connectionString = "Server=localhost;Database=FinanceTracker;Integrated S
 string loadUsersQuery = "SELECT UserId, FirstName, LastName, Balance, MonthlyIncome, MonthlyExpenses FROM Users";
 string loadTransactionsQuery = "SELECT TransactionId, Amount, UserId, CategoryId, TransactionDate, TransactionDescription FROM Transactions";
 string loadCategoriesQuery = "SELECT CategoryId, CategoryName FROM Categories ORDER BY CategoryId";
-
-/* string fileName = "FinanceTracker.json";
-string backupFile = "FinanceTracker.backup.json"; */
 
 using (SqlConnection connection = new SqlConnection(connectionString))
 {
@@ -49,8 +44,6 @@ using (SqlConnection connection = new SqlConnection(connectionString))
                 user.MonthlyIncome = MonthlyIncome;
                 user.MonthlyExpenses = MonthlyExpenses;
                 userList.Add(user);
-
-                //Console.WriteLine($"User Id: {UsersId} \n Name: {FirstName} {LastName}");
             }
         }
     }
@@ -109,50 +102,7 @@ using (SqlConnection connection = new SqlConnection(connectionString))
             }
         }
     }
-
-    // temp display at start, will remove in final ver.
-    DisplayUsers();
-
-    foreach (Category category in categoryList)
-    {
-        Console.WriteLine($"{category.CategoryId} {category.CategoryName}");
-    }
 }
-
-/* if (File.Exists(fileName))
-{
-    var dataFile = File.ReadAllText(fileName);
-
-    try
-    {
-        userList = JsonSerializer.Deserialize<List<User>>(dataFile) ?? new List<User>();
-    }
-    catch
-    {
-        while (true)
-        {
-            Console.WriteLine("Corrupted or invalid data file. Do you wish to continue? Proceeding will overwrite current save file (FinanceTracker.json)");
-            Console.WriteLine("1. yes\n2. No\n");
-            string? userInput = Console.ReadLine();
-
-            switch (userInput)
-            {
-                case "1":
-                    File.Copy(fileName, backupFile, true);
-                    userList = new List<User>();
-                    break;
-                case "2":
-                    Environment.Exit(0);
-                    return;
-                default:
-                    Console.WriteLine("Invalid option\n");
-                    continue;
-            }
-
-            break;
-        }
-    }
-} */
 
 while (true)
 {
@@ -184,7 +134,6 @@ while (true)
             DeleteTransaction();
             break;
         case "6":
-            //SaveData();
             return;
         default:
             Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
@@ -356,17 +305,6 @@ while (true)
                             }
                         }
                     }
-
-                    /* int TotalTransactions = userList[userInput].TransactionList.Count;
-
-                    decimal LargestExpense = 0m;
-                    foreach (var transaction in userList[userInput].TransactionList)
-                    {
-                        if (transaction.Amount > LargestExpense)
-                        {
-                            LargestExpense = transaction.Amount;
-                        }
-                    } */
 
                     Console.WriteLine("Press enter to return to the main menu");
                     Console.ReadLine();
@@ -623,7 +561,7 @@ while (true)
     {
         if (userList.Count > 0)
         {
-            Console.WriteLine("Please enter which user you wish to delete a transaction from");
+            Console.WriteLine("\nPlease enter which user you wish to delete a transaction from");
             DisplayUsers();
         }
         else
@@ -637,102 +575,124 @@ while (true)
         {
             if ((userInput <= userList.Count - 1) && (userInput >= 0))
             {
-                if (userList[userInput].TransactionList.Count > 0)
+                int selectedUsersId = userList[userInput].UserId;
+
+                string transactionQuery = "SELECT Categories.CategoryName, Transactions.TransactionDescription, Transactions.Amount, Transactions.TransactionDate, Transactions.TransactionId " +
+                                            "FROM Transactions " +
+                                            "INNER JOIN Categories ON Categories.CategoryId = Transactions.CategoryId " +
+                                            "WHERE Transactions.UserId = @UserId";
+
+                using (SqlConnection connection = new SqlConnection(connectionString))
                 {
-                    ViewTransactionHeader();
-
-                    for (int i = 0; i < userList[userInput].TransactionList.Count; i++)
-                    {
-                        Transaction transaction = userList[userInput].TransactionList[i];
-
-                        Category? selectedCategory = null;
-
-                        foreach (Category category in categoryList)
-                        {
-                            if (transaction.CategoryId == category.CategoryId)
-                            {
-                                selectedCategory = category;
-                                break;
-                            }
-                        }
-
-                        if (selectedCategory == null)
-                        {
-                            Console.WriteLine("Category not found");
-                            continue;
-                        }
-
-                        Console.WriteLine($"{i}: {selectedCategory.CategoryName,-29}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
-                    }
-
-                    Console.WriteLine("\nPlease enter the number of the transaction you wish to delete");
-
-                    if (!int.TryParse(Console.ReadLine(), out int transactionInput) || !(transactionInput <= userList[userInput].TransactionList.Count - 1) || !(transactionInput >= 0))
-                    {
-                        Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
-                        Console.ReadLine();
-                        return;
-                    }
-
-                    string deleteTransactionQuery = "DELETE FROM Transactions " +
-                                                    "WHERE TransactionId = @TransactionId";
-
-                    int TransactionId = userList[userInput].TransactionList[transactionInput].TransactionId;
-
-                    using (SqlConnection connection = new SqlConnection(connectionString))
+                    using (SqlCommand transactionCommand = new SqlCommand(transactionQuery, connection))
                     {
                         try
                         {
+                            transactionCommand.Parameters.AddWithValue("@UserId", selectedUsersId);
+
                             connection.Open();
-                            Console.WriteLine("Connection Successful");
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine(ex.Message);
-                            Console.WriteLine("Connection failure");
-                            return;
-                        }
 
-                        using (SqlCommand command = new SqlCommand(deleteTransactionQuery, connection))
-                        {
-                            command.Parameters.AddWithValue("@TransactionId", TransactionId);
+                            ViewTransactionHeader();
 
-                            try
+                            bool transactionsFound = false;
+
+                            using (SqlDataReader reader = transactionCommand.ExecuteReader())
                             {
-                                int rowsAffected = command.ExecuteNonQuery();
-
-                                if (rowsAffected == 1)
+                                while (reader.Read())
                                 {
-                                    userList[userInput].TransactionList.RemoveAt(transactionInput);
+                                    string categoryName = reader.GetString(0);
+                                    string transactionDescription = reader.GetString(1);
+                                    decimal amount = reader.GetDecimal(2);
+                                    DateTime fullDate = reader.GetDateTime(3);
+                                    DateOnly transactionDate = DateOnly.FromDateTime(fullDate);
+                                    int transactionId = reader.GetInt32(4);
 
-                                    Console.WriteLine("\nTransaction deleted\nPress enter to return to the menu");
-                                    Console.ReadLine();
+                                    Console.WriteLine($"{transactionId}: {categoryName,-29}{transactionDescription,-48}{amount,-32}{transactionDate}");
+
+                                    transactionsFound = true;
                                 }
-                                else
+
+                                if (transactionsFound == false)
                                 {
-                                    Console.WriteLine("Transaction failed to delete\nPress enter to return to the main menu.");
+                                    Console.WriteLine("There are no transactions available\nPress enter to return to the main menu");
                                     Console.ReadLine();
                                     return;
                                 }
                             }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine($"Query failed {ex.Message}");
-                                Console.WriteLine("\nDelete transaction operation failed\nPress enter to return to the main menu");
-                                Console.ReadLine();
-                                return;
-
-                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Operation failed: {ex.Message}");
+                            Console.WriteLine("Press enter to return to the main menu");
+                            Console.ReadLine();
+                            return;
                         }
                     }
-
-                    //SaveData();
                 }
-                else
+
+                Console.WriteLine("\nPlease enter the number of the transaction you wish to delete");
+
+                if (!int.TryParse(Console.ReadLine(), out int transactionInput) || !(transactionInput > 0))
                 {
-                    Console.WriteLine("\nThere are no available transactions\nPress enter to return to the menu");
+                    Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
                     Console.ReadLine();
                     return;
+                }
+
+                string deleteTransactionQuery = "DELETE FROM Transactions " +
+                                                "WHERE TransactionId = @TransactionId and UserId = @UserId";
+
+                using (SqlConnection connection = new SqlConnection(connectionString))
+                {
+                    try
+                    {
+                        connection.Open();
+                        Console.WriteLine("Connection Successful");
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine(ex.Message);
+                        Console.WriteLine("Connection failure");
+                        return;
+                    }
+
+                    using (SqlCommand command = new SqlCommand(deleteTransactionQuery, connection))
+                    {
+                        command.Parameters.AddWithValue("@TransactionId", transactionInput);
+                        command.Parameters.AddWithValue("@UserId", selectedUsersId);
+
+                        try
+                        {
+                            int rowsAffected = command.ExecuteNonQuery();
+
+                            if (rowsAffected == 1)
+                            {
+                                Transaction? transactionToRemove = userList[userInput].TransactionList.Find(transaction => transaction.TransactionId == transactionInput);
+
+                                if (transactionToRemove != null)
+                                {
+                                    userList[userInput].TransactionList.Remove(transactionToRemove);
+                                }
+
+                                Console.WriteLine("\nTransaction deleted\nPress enter to return to the menu");
+                                Console.ReadLine();
+                            }
+                            else
+                            {
+                                Console.WriteLine("Transaction failed to delete\nPress enter to return to the main menu.");
+                                Console.ReadLine();
+                                return;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Query failed: {ex.Message}");
+                            Console.WriteLine("\nDelete transaction operation failed\nPress enter to return to the main menu");
+                            Console.ReadLine();
+                            return;
+
+                        }
+                    }
                 }
             }
             else
@@ -758,12 +718,6 @@ void DisplayUsers()
         Console.WriteLine($"{i}: {userList[i].FirstName} {userList[i].LastName}");
     }
 }
-
-/* void SaveData()
-{
-    string jsonString = JsonSerializer.Serialize(userList, JsonOptions.Options);
-    File.WriteAllText(fileName, jsonString);
-} */
 
 void FilterTransactions(int userInput, int categoryId)
 {
@@ -820,35 +774,6 @@ void FilterTransactions(int userInput, int categoryId)
         }
     }
 
-    // Previous code - will be removed later
-
-    /* Category? selectedCategory = null;
-
-    foreach (Category category in categoryList)
-    {
-        if (category.CategoryId == categoryId)
-        {
-            selectedCategory = category;
-            break;
-        }
-    }
-
-    if (selectedCategory == null)
-    {
-        Console.WriteLine("Category not found");
-        return;
-    }
-
-    ViewTransactionHeader();
-    foreach (Transaction transaction in userList[userInput].TransactionList)
-    {
-        if (transaction.CategoryId == categoryId)
-        {
-            Console.WriteLine($"{selectedCategory.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
-        }
-    }
-    */
-
     Console.WriteLine("\nPress enter to return to the main menu\n");
     Console.ReadLine();
 }
@@ -884,12 +809,4 @@ class Category
 {
     public int CategoryId { get; set; }
     public string? CategoryName { get; set; }
-}
-
-class JsonOptions
-{
-    public static readonly JsonSerializerOptions Options = new()
-    {
-        WriteIndented = true
-    };
 }
