@@ -1,4 +1,4 @@
-﻿﻿using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 
 List<User> userList = new List<User>();
 List<Category> categoryList = new List<Category>();
@@ -6,7 +6,6 @@ List<Category> categoryList = new List<Category>();
 string connectionString = "Server=localhost;Database=FinanceTracker;Integrated Security=True;TrustServerCertificate=True;";
 
 string loadUsersQuery = "SELECT UserId, FirstName, LastName, Balance, MonthlyIncome, MonthlyExpenses FROM Users";
-string loadTransactionsQuery = "SELECT TransactionId, Amount, UserId, CategoryId, TransactionDate, TransactionDescription FROM Transactions";
 string loadCategoriesQuery = "SELECT CategoryId, CategoryName FROM Categories ORDER BY CategoryId";
 
 using (SqlConnection connection = new SqlConnection(connectionString))
@@ -44,42 +43,6 @@ using (SqlConnection connection = new SqlConnection(connectionString))
                 user.MonthlyIncome = MonthlyIncome;
                 user.MonthlyExpenses = MonthlyExpenses;
                 userList.Add(user);
-            }
-        }
-    }
-
-
-    using (SqlCommand loadTransactionsCommand = new SqlCommand(loadTransactionsQuery, connection))
-    {
-        using (SqlDataReader reader = loadTransactionsCommand.ExecuteReader())
-        {
-            while (reader.Read())
-            {
-                int TransactionId = reader.GetInt32(0);
-                decimal Amount = reader.GetDecimal(1);
-                int UserId = reader.GetInt32(2);
-                int CategoryId = reader.GetInt32(3);
-                DateTime fullDateTime = reader.GetDateTime(4);
-                DateOnly TransactionDate = DateOnly.FromDateTime(fullDateTime);
-                string? TransactionDescription = reader.GetString(5);
-
-                Transaction transaction = new Transaction();
-
-                transaction.TransactionId = TransactionId;
-                transaction.Amount = Amount;
-                transaction.UserId = UserId;
-                transaction.CategoryId = CategoryId;
-                transaction.TransactionDate = TransactionDate;
-                transaction.TransactionDescription = TransactionDescription;
-
-                foreach (User user in userList)
-                {
-                    if (user.UserId == transaction.UserId)
-                    {
-                        user.TransactionList.Add(transaction);
-                        break;
-                    }
-                }
             }
         }
     }
@@ -335,6 +298,8 @@ while (true)
             if (int.TryParse(Console.ReadLine(), out int userInput) && (userInput <= userList.Count - 1) && (userInput >= 0))
             {
 
+                int selectedUser = userList[userInput].UserId;
+
                 if (categoryList.Count == 0)
                 {
                     Console.WriteLine("There are no categories available\nPress enter to return to the main menu");
@@ -356,7 +321,7 @@ while (true)
                     return;
                 }
 
-                Category selectedCategory = categoryList[categoryChoice - 1];
+                int selectedCategory = categoryList[categoryChoice - 1].CategoryId;
 
                 Console.WriteLine("\nPlease enter a description for the transaction");
                 string? transactionDescription = Console.ReadLine();
@@ -382,16 +347,7 @@ while (true)
                     return;
                 }
 
-                Transaction transaction = new Transaction();
-
-                transaction.Amount = purchaseAmount;
-                transaction.UserId = userList[userInput].UserId;
-                transaction.CategoryId = selectedCategory.CategoryId;
-                transaction.TransactionDate = transactionDate;
-                transaction.TransactionDescription = transactionDescription;
-
                 string addTransactionQuery = "INSERT INTO Transactions (Amount, UserId, CategoryId, TransactionDate, TransactionDescription) " +
-                                            "OUTPUT INSERTED.TransactionId " +
                                             "VALUES (@Amount, @UserId, @CategoryId, @TransactionDate, @TransactionDescription)";
 
                 using (SqlConnection connection = new SqlConnection(connectionString))
@@ -409,21 +365,28 @@ while (true)
 
                     using (SqlCommand command = new SqlCommand(addTransactionQuery, connection))
                     {
-                        command.Parameters.AddWithValue("@Amount", transaction.Amount);
-                        command.Parameters.AddWithValue("@UserId", transaction.UserId);
-                        command.Parameters.AddWithValue("@CategoryId", transaction.CategoryId);
-                        command.Parameters.AddWithValue("@TransactionDate", transaction.TransactionDate);
-                        command.Parameters.AddWithValue("@TransactionDescription", transaction.TransactionDescription);
+                        command.Parameters.AddWithValue("@Amount", purchaseAmount);
+                        command.Parameters.AddWithValue("@UserId", selectedUser);
+                        command.Parameters.AddWithValue("@CategoryId", selectedCategory);
+                        command.Parameters.AddWithValue("@TransactionDate", transactionDate);
+                        command.Parameters.AddWithValue("@TransactionDescription", transactionDescription);
 
                         try
                         {
-                            int newTransactionId = (int)command.ExecuteScalar();
+                            int rowsAffected = command.ExecuteNonQuery();
 
-                            transaction.TransactionId = newTransactionId;
-                            userList[userInput].TransactionList.Add(transaction);
+                            if (rowsAffected == 1)
+                            {
+                                Console.WriteLine("\nNew transaction successfuly added\nPress enter to return to the main menu");
+                                Console.ReadLine();
+                            }
+                            else
+                            {
+                                Console.WriteLine("Transaction failed to be added\nPress enter to return to the main menu.");
+                                Console.ReadLine();
+                                return;
+                            }
 
-                            Console.WriteLine("\nNew transaction successfuly added\nPress enter to return to the main menu");
-                            Console.ReadLine();
                         }
                         catch (Exception ex)
                         {
@@ -667,13 +630,6 @@ while (true)
 
                             if (rowsAffected == 1)
                             {
-                                Transaction? transactionToRemove = userList[userInput].TransactionList.Find(transaction => transaction.TransactionId == transactionInput);
-
-                                if (transactionToRemove != null)
-                                {
-                                    userList[userInput].TransactionList.Remove(transactionToRemove);
-                                }
-
                                 Console.WriteLine("\nTransaction deleted\nPress enter to return to the menu");
                                 Console.ReadLine();
                             }
@@ -792,17 +748,6 @@ class User
     public decimal Balance { get; set; }
     public decimal MonthlyIncome { get; set; }
     public decimal MonthlyExpenses { get; set; }
-    public List<Transaction> TransactionList { get; set; } = new List<Transaction>();
-}
-
-class Transaction
-{
-    public int TransactionId { get; set; }
-    public decimal Amount { get; set; }
-    public int UserId { get; set; }
-    public int CategoryId { get; set; }
-    public DateOnly TransactionDate { get; set; }
-    public string? TransactionDescription { get; set; }
 }
 
 class Category
