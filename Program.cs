@@ -1,71 +1,12 @@
 ﻿using Microsoft.Data.SqlClient;
 
-List<User> userList = new List<User>();
-List<Category> categoryList = new List<Category>();
-
 string connectionString = "Server=localhost;Database=FinanceTracker;Integrated Security=True;TrustServerCertificate=True;";
 
-string loadUsersQuery = "SELECT UserId, FirstName, LastName, Balance, MonthlyIncome, MonthlyExpenses FROM Users";
-string loadCategoriesQuery = "SELECT CategoryId, CategoryName FROM Categories ORDER BY CategoryId";
-
-using (SqlConnection connection = new SqlConnection(connectionString))
-{
-    using (SqlCommand loadUsersCommand = new SqlCommand(loadUsersQuery, connection))
-    {
-        try
-        {
-            connection.Open();
-            Console.WriteLine("Connection Successful");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Connection Failed: {ex.Message}");
-            return;
-        }
-
-        using (SqlDataReader reader = loadUsersCommand.ExecuteReader())
-        {
-            while (reader.Read())
-            {
-                int UserId = reader.GetInt32(0);
-                string FirstName = reader.GetString(1);
-                string LastName = reader.GetString(2);
-                decimal Balance = reader.GetDecimal(3);
-                decimal MonthlyIncome = reader.GetDecimal(4);
-                decimal MonthlyExpenses = reader.GetDecimal(5);
-
-                User user = new User();
-
-                user.UserId = UserId;
-                user.FirstName = FirstName;
-                user.LastName = LastName;
-                user.Balance = Balance;
-                user.MonthlyIncome = MonthlyIncome;
-                user.MonthlyExpenses = MonthlyExpenses;
-                userList.Add(user);
-            }
-        }
-    }
-
-    using (SqlCommand loadCategoriesCommand = new SqlCommand(loadCategoriesQuery, connection))
-    {
-        using (SqlDataReader reader = loadCategoriesCommand.ExecuteReader())
-        {
-            while (reader.Read())
-            {
-                int CategoryId = reader.GetInt32(0);
-                string CategoryName = reader.GetString(1);
-
-                Category category = new Category();
-
-                category.CategoryId = CategoryId;
-                category.CategoryName = CategoryName;
-
-                categoryList.Add(category);
-            }
-        }
-    }
-}
+UserRepository userRepository = new UserRepository(connectionString);
+TransactionRepository transactionRepository = new TransactionRepository(connectionString);
+CategoryRepository categoryRepository = new CategoryRepository(connectionString);
+List<User> userList = userRepository.GetUsers();
+List<Category> categoryList = categoryRepository.GetCategories();
 
 while (true)
 {
@@ -109,8 +50,22 @@ while (true)
         Console.WriteLine("Please enter the users first name");
         string? firstName = Console.ReadLine();
 
+        if (firstName == null || firstName == "")
+        {
+            Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+            Console.ReadLine();
+            return;
+        }
+
         Console.WriteLine("Please enter the users last name");
         string? lastName = Console.ReadLine();
+
+        if (lastName == null || lastName == "")
+        {
+            Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+            Console.ReadLine();
+            return;
+        }
 
         Console.WriteLine("Please enter the users current balance");
         if (!decimal.TryParse(Console.ReadLine(), out decimal usersBalance))
@@ -144,54 +99,22 @@ while (true)
         user.MonthlyIncome = usersIncome;
         user.MonthlyExpenses = usersExpenses;
 
+        int newUserId = userRepository.AddUser(user.FirstName, user.LastName, user.Balance, user.MonthlyIncome, user.MonthlyExpenses);
 
-
-        string addUserQuery = "INSERT INTO Users (FirstName, LastName, Balance, MonthlyIncome, MonthlyExpenses) " +
-                                "OUTPUT INSERTED.UserId " +
-                                "VALUES (@FirstName, @LastName, @Balance, @MonthlyIncome, @MonthlyExpenses)";
-
-        using (SqlConnection connection = new SqlConnection(connectionString))
+        if (newUserId <= 0)
         {
-
-            try
-            {
-                connection.Open();
-                Console.WriteLine("Connection Successful");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Connection failed: {ex.Message}");
-                return;
-            }
-
-            using (SqlCommand command = new SqlCommand(addUserQuery, connection))
-            {
-                command.Parameters.AddWithValue("@FirstName", firstName);
-                command.Parameters.AddWithValue("@LastName", lastName);
-                command.Parameters.AddWithValue("@Balance", usersBalance);
-                command.Parameters.AddWithValue("@MonthlyIncome", usersIncome);
-                command.Parameters.AddWithValue("@MonthlyExpenses", usersExpenses);
-
-                try
-                {
-                    int newUserId = (int)command.ExecuteScalar();
-
-                    user.UserId = newUserId;
-                    userList.Add(user);
-
-                    Console.WriteLine("\nNew user successfuly added\nPress enter to return to the main menu");
-                    Console.ReadLine();
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Query failed {ex.Message}");
-                    Console.WriteLine("\nNew user operation failed\nPress enter to return to the main menu");
-                    Console.ReadLine();
-
-                }
-            }
+            Console.WriteLine("Failed to add user\nPress enter to return to the main menu");
+            Console.ReadLine();
+            return;
         }
+
+        user.UserId = newUserId;
+        userList.Add(user);
+
+        Console.WriteLine("\nNew user successfuly added\nPress enter to return to the main menu");
+        Console.ReadLine();
     }
+
 
     void UserSummary()
     {
@@ -326,6 +249,17 @@ while (true)
                 Console.WriteLine("\nPlease enter a description for the transaction");
                 string? transactionDescription = Console.ReadLine();
 
+                if (transactionDescription == null)
+                {
+                    Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+                    Console.ReadLine();
+                    return;
+                }
+                else if (transactionDescription == "")
+                {
+                    transactionDescription = "N/A";
+                }
+
                 Console.WriteLine("\nPlease enter the date of the transaction (Format: MM/DD/YYYY)");
                 string? purchaseDate = Console.ReadLine();
 
@@ -347,57 +281,21 @@ while (true)
                     return;
                 }
 
-                string addTransactionQuery = "INSERT INTO Transactions (Amount, UserId, CategoryId, TransactionDate, TransactionDescription) " +
-                                            "VALUES (@Amount, @UserId, @CategoryId, @TransactionDate, @TransactionDescription)";
+                int rowsAffected = transactionRepository.AddTransaction(purchaseAmount, selectedUser, selectedCategory, transactionDate, transactionDescription);
 
-                using (SqlConnection connection = new SqlConnection(connectionString))
+                if (rowsAffected != 1)
                 {
-                    try
-                    {
-                        connection.Open();
-                        Console.WriteLine("Connection Successful");
-                    }
-                    catch (Exception ex)
-                    {
-                        Console.WriteLine($"Connection failed: {ex.Message}");
-                        return;
-                    }
-
-                    using (SqlCommand command = new SqlCommand(addTransactionQuery, connection))
-                    {
-                        command.Parameters.AddWithValue("@Amount", purchaseAmount);
-                        command.Parameters.AddWithValue("@UserId", selectedUser);
-                        command.Parameters.AddWithValue("@CategoryId", selectedCategory);
-                        command.Parameters.AddWithValue("@TransactionDate", transactionDate);
-                        command.Parameters.AddWithValue("@TransactionDescription", transactionDescription);
-
-                        try
-                        {
-                            int rowsAffected = command.ExecuteNonQuery();
-
-                            if (rowsAffected == 1)
-                            {
-                                Console.WriteLine("\nNew transaction successfuly added\nPress enter to return to the main menu");
-                                Console.ReadLine();
-                            }
-                            else
-                            {
-                                Console.WriteLine("Transaction failed to be added\nPress enter to return to the main menu.");
-                                Console.ReadLine();
-                                return;
-                            }
-
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine($"Query failed {ex.Message}");
-                            Console.WriteLine("\nNew transaction operation failed\nPress enter to return to the main menu");
-                            Console.ReadLine();
-                            return;
-
-                        }
-                    }
+                    Console.WriteLine("Operation failed\nPress enter to return to the main menu");
+                    Console.ReadLine();
+                    return;
                 }
+                else
+                {
+                    Console.WriteLine("Transaction successfully added\nPress enter to return to the main menu");
+                    Console.ReadLine();
+                    return;
+                }
+
             }
             else
             {
