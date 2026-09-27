@@ -13,33 +13,25 @@ class CategoryRepository(string connectionString)
         {
             using (SqlCommand loadCategoriesCommand = new SqlCommand(loadCategoriesQuery, connection))
             {
-                try
-                {
-                    connection.Open();
-                }
-                catch
-                {
-                    return categoryList;
-                }
+                connection.Open();
 
                 using (SqlDataReader reader = loadCategoriesCommand.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        int CategoryId = reader.GetInt32(0);
-                        string CategoryName = reader.GetString(1);
+                        int categoryId = reader.GetInt32(0);
+                        string categoryName = reader.GetString(1);
 
                         Category category = new Category();
 
-                        category.CategoryId = CategoryId;
-                        category.CategoryName = CategoryName;
+                        category.CategoryId = categoryId;
+                        category.CategoryName = categoryName;
 
                         categoryList.Add(category);
                     }
                 }
             }
         }
-
         return categoryList;
     }
 }

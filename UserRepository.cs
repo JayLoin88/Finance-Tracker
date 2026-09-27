@@ -12,16 +12,7 @@ class UserRepository(string connectionString)
         {
             using (SqlCommand loadUsersCommand = new SqlCommand(loadUsersQuery, connection))
             {
-                try
-                {
-                    connection.Open();
-                    Console.WriteLine("Connection Successful");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Connection Failed: {ex.Message}");
-                    return userList;
-                }
+                connection.Open();
 
                 using (SqlDataReader reader = loadUsersCommand.ExecuteReader())
                 {
@@ -59,20 +50,7 @@ class UserRepository(string connectionString)
 
         using (SqlConnection connection = new SqlConnection(connectionString))
         {
-
-            int newUserId;
-
-            try
-            {
-                connection.Open();
-                Console.WriteLine("Connection Successful");
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Connection failed: {ex.Message}");
-                newUserId = 0;
-                return newUserId;
-            }
+            connection.Open();
 
             using (SqlCommand command = new SqlCommand(addUserQuery, connection))
             {
@@ -82,15 +60,59 @@ class UserRepository(string connectionString)
                 command.Parameters.AddWithValue("@MonthlyIncome", MonthlyIncome);
                 command.Parameters.AddWithValue("@MonthlyExpenses", MonthlyExpenses);
 
-                try
+                int newUserId = (int)command.ExecuteScalar();
+                return newUserId;
+            }
+        }
+    }
+
+    public UserSummary? GetUserSummary(int selectedUserId)
+    {
+        string userSummaryQuery = "SELECT Users.FirstName, Users.LastName, Users.UserId, Users.Balance, Users.MonthlyIncome, Users.MonthlyExpenses, " +
+                                                        "COUNT(Transactions.TransactionId) AS TotalTransactions, ISNULL(MAX(Transactions.Amount), 0) AS LargestExpense " +
+                                                        "FROM Users " +
+                                                        "LEFT OUTER JOIN Transactions ON Transactions.UserId = Users.UserId " +
+                                                        "WHERE Users.UserId = @UserId " +
+                                                        "GROUP BY Users.FirstName, Users.LastName, Users.UserId, Users.Balance, Users.MonthlyIncome, Users.MonthlyExpenses";
+
+        using (SqlConnection connection = new SqlConnection(connectionString))
+        {
+            using (SqlCommand userSummaryCommand = new SqlCommand(userSummaryQuery, connection))
+            {
+                userSummaryCommand.Parameters.AddWithValue("@UserId", selectedUserId);
+
+                connection.Open();
+
+                using (SqlDataReader reader = userSummaryCommand.ExecuteReader())
                 {
-                    newUserId = (int)command.ExecuteScalar();
-                    return newUserId;
-                }
-                catch
-                {
-                    newUserId = 0;
-                    return newUserId;
+                    if (reader.Read()) // because only one row will be read - used 'if' instead of 'while'
+                    {
+                        string firstName = reader.GetString(0);
+                        string lastName = reader.GetString(1);
+                        int userId = reader.GetInt32(2);
+                        decimal balance = reader.GetDecimal(3);
+                        decimal monthlyIncome = reader.GetDecimal(4);
+                        decimal monthlyExpenses = reader.GetDecimal(5);
+                        int totalTransactions = reader.GetInt32(6);
+                        decimal largestExpense = reader.GetDecimal(7);
+
+                        UserSummary userSummary = new UserSummary();
+
+                        userSummary.FirstName = firstName;
+                        userSummary.LastName = lastName;
+                        userSummary.UserId = userId;
+                        userSummary.Balance = balance;
+                        userSummary.MonthlyIncome = monthlyIncome;
+                        userSummary.MonthlyExpenses = monthlyExpenses;
+                        userSummary.TotalTransactions = totalTransactions;
+                        userSummary.LargestExpense = largestExpense;
+
+                        return userSummary;
+                    }
+                    else
+                    {
+                        return null;
+                    }
                 }
             }
         }
