@@ -1,17 +1,77 @@
-Finance Tracker
+| Finance Tracker |
 
-A console application built using c#, .NET framework, and JSON format. Users can add multiple users to the finance tracker, then add their transactions. They can then view
-a summary of their transactions which will show their total number of transactions, the highest transaction recorded, and will even calculate the users net savings after inputting
-their monthly income and expenses. This application does feature data persistence through the use of JSON serialization with formatting, and if the .json file gets corrupted, the
-user has the option to procede or exit. If the user procedes, a backup of the corrupted file will be created, and a new save file will overwrite the original.
+Finance Tracker is a C# console application for managing users and tracking their financial transactions. The application uses SQL Server for persistent data storage and communicates with the database using ADO.NET and parameterized SQL queries.
 
-- Features -
+The project began as a file-based application using JSON for persistence and was later migrated to a relational SQL Server database. As part of that migration, the application was refactored to separate database operations from the console user interface using repository classes.
 
-- Add users
-- Add transactions
-- Delete transactions
-- View summaries
-- Filter by category
-- Date validation
-- JSON persistence
-- Backup corrupted save files
+
+| Features |
+
+* Add and manage multiple users
+* Add financial transactions for each individual users
+* Assign transactions to categories
+* View all transactions for a selected user
+* Filter transactions by category
+* Delete transactions
+* View financial summaries for users
+* Calculate monthly net savings based on income and expenses
+* Display total transaction count and largest recorded expense
+* Validate transaction dates and user input
+* Handle database errors without crashing the application
+* Persist application data using SQL Server
+
+
+| Technologies Used |
+
+- C#
+- .NET
+- SQL Server
+- ADO.NET (Microsoft.Data.SqlClient)
+- SQL
+
+
+| Database |
+
+The application uses a relational SQL Server database containing three primary tables:
+
+- Users — stores user information, balance, monthly income, and monthly expenses.
+- Transactions — stores transaction amounts, descriptions, dates, and relationships to users and categories.
+- Categories — stores the available transaction categories.
+
+Foreign keys are used to associate transactions with their corresponding users and categories.
+
+The application performs database operations using parameterized SQL queries to safely insert, retrieve, filter, and delete data.
+
+
+| Application Structure |
+
+The project separates application responsibilities between models, repositories, and the console interface.
+
+- Models represent application data such as users, transactions, categories, and user summaries.
+
+- Repositories handle communication with SQL Server, including SQL queries and mapping database results to C# objects.
+
+- Program.cs handles the console interface, user input, validation, and application flow.
+
+This structure keeps database access separate from the user interface and makes the application easier to maintain and extend.
+
+
+| What I Learned |
+
+This project gave me hands-on experience with:
+
+- Designing and working with a relational database
+- Connecting a C# application to SQL Server
+- Writing SQL queries involving joins, filtering, aggregation, and CRUD operations
+- Using ADO.NET with SqlConnection, SqlCommand, and SqlDataReader
+- Using parameterized queries
+- Working with primary keys, foreign keys, and database constraints
+- Separating database logic from application/UI logic
+- Handling database exceptions at the application level
+- Validating and converting user input
+- Refactoring an existing application from JSON persistence to SQL Server
+
+
+| Project Status |
+
+Finance Tracker is a completed console application and serves as a portfolio project demonstrating foundational C#, SQL Server, ADO.NET, relational database, and application architecture skills.
