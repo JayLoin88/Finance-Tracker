@@ -72,6 +72,31 @@ This project gave me hands-on experience with:
 - Refactoring an existing application from JSON persistence to SQL Server
 
 
+| Getting Started |
+
+- Prerequisites -
+
+To run Finance Tracker locally, you will need:
+
+- .NET 10
+- SQL Server
+- SQL Server Management Studio (SSMS)
+
+| Setup |
+
+1. Clone or download this repository.
+2. Open Database/FinanceTracker.sql in SQL Server Management Studio.
+3. Execute the script to create the FinanceTracker database, tables, relationships, constraints, indexes, and default transaction categories.
+4. Verify that the connection string in Program.cs matches your local SQL Server configuration.
+5. Build and run the application.
+
+The default connection string is configured to use a local SQL Server instance with Windows Authentication:
+
+Server=localhost;Database=FinanceTracker;Integrated Security=True;TrustServerCertificate=True;
+
+Depending on your SQL Server configuration, you may need to modify the server portion of the connection string before running the application.
+
+
 | Project Status |
 
 Finance Tracker is a completed console application and serves as a portfolio project demonstrating foundational C#, SQL Server, ADO.NET, relational database, and application architecture skills.
