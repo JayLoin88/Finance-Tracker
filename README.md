@@ -8,7 +8,7 @@ The project began as a file-based application using JSON for persistence and was
 | Features |
 
 * Add and manage multiple users
-* Add financial transactions for each individual users
+* Add financial transactions for individual users
 * Assign transactions to categories
 * View all transactions for a selected user
 * Filter transactions by category
