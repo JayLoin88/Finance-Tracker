@@ -2,7 +2,7 @@ using Microsoft.Data.SqlClient;
 
 class TransactionRepository(string connectionString)
 {
-    public int AddTransaction(decimal purchaseAmount, int selectedUser, int selectedCategory, DateOnly transactionDate, string transactionDescription)
+    public int AddTransaction(decimal purchaseAmount, int userId, int categoryId, DateOnly transactionDate, string transactionDescription)
     {
         string addTransactionQuery = "INSERT INTO Transactions (Amount, UserId, CategoryId, TransactionDate, TransactionDescription) " +
                                             "VALUES (@Amount, @UserId, @CategoryId, @TransactionDate, @TransactionDescription)";
@@ -14,8 +14,8 @@ class TransactionRepository(string connectionString)
             using (SqlCommand addTransactionCommand = new SqlCommand(addTransactionQuery, connection))
             {
                 addTransactionCommand.Parameters.AddWithValue("@Amount", purchaseAmount);
-                addTransactionCommand.Parameters.AddWithValue("@UserId", selectedUser);
-                addTransactionCommand.Parameters.AddWithValue("@CategoryId", selectedCategory);
+                addTransactionCommand.Parameters.AddWithValue("@UserId", userId);
+                addTransactionCommand.Parameters.AddWithValue("@CategoryId", categoryId);
                 addTransactionCommand.Parameters.AddWithValue("@TransactionDate", transactionDate);
                 addTransactionCommand.Parameters.AddWithValue("@TransactionDescription", transactionDescription);
 
@@ -76,7 +76,7 @@ class TransactionRepository(string connectionString)
         List<Transaction> filteredTransactions = new List<Transaction>();
 
         string filterTransactionCategory = "SELECT Transactions.Amount, Transactions.TransactionDate, Transactions.TransactionDescription, Categories.CategoryName " +
-                                        "From Transactions " +
+                                        "FROM Transactions " +
                                         "INNER JOIN Categories " +
                                         "ON Transactions.CategoryId = Categories.CategoryId " +
                                         "WHERE Transactions.UserId = @UserId AND Transactions.CategoryId = @CategoryId";
@@ -120,7 +120,7 @@ class TransactionRepository(string connectionString)
     public int DeleteTransaction(int userId, int transactionId)
     {
         string deleteTransactionQuery = "DELETE FROM Transactions " +
-                                                "WHERE TransactionId = @TransactionId and UserId = @UserId";
+                                                "WHERE TransactionId = @TransactionId AND UserId = @UserId";
 
         using (SqlConnection connection = new SqlConnection(connectionString))
         {

@@ -1,6 +1,4 @@
-﻿using Microsoft.Data.SqlClient;
-
-string connectionString = "Server=localhost;Database=FinanceTracker;Integrated Security=True;TrustServerCertificate=True;";
+﻿string connectionString = "Server=localhost;Database=FinanceTracker;Integrated Security=True;TrustServerCertificate=True;";
 
 UserRepository userRepository = new UserRepository(connectionString);
 TransactionRepository transactionRepository = new TransactionRepository(connectionString);
@@ -15,19 +13,19 @@ try
 }
 catch
 {
-    Console.WriteLine("Unable to access the the database");
+    Console.WriteLine("Unable to access the database.");
     return;
 }
 
 while (true)
 {
     Console.WriteLine("\n*Personal Finance Tracker*\n");
-    Console.WriteLine("1. Add user");
-    Console.WriteLine("2. User summary");
-    Console.WriteLine("3. Add transaction");
-    Console.WriteLine("4. View a users transactions");
-    Console.WriteLine("5. Delete a transaction");
-    Console.WriteLine("6. Exit\n");
+    Console.WriteLine("1. Add user.");
+    Console.WriteLine("2. User summary.");
+    Console.WriteLine("3. Add transaction.");
+    Console.WriteLine("4. View a user's transactions.");
+    Console.WriteLine("5. Delete a transaction.");
+    Console.WriteLine("6. Exit.\n");
 
     string? userInput = Console.ReadLine();
 
@@ -51,7 +49,7 @@ while (true)
         case "6":
             return;
         default:
-            Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
+            Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
             Console.ReadLine();
             break;
     }
@@ -59,61 +57,62 @@ while (true)
 
 void AddUser()
 {
-    Console.WriteLine("Please enter the users first name");
+    Console.WriteLine("\nPlease enter the user's first name.");
     string? firstName = Console.ReadLine();
 
     if (string.IsNullOrWhiteSpace(firstName))
     {
-        Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
     firstName = firstName.Trim();
 
-    Console.WriteLine("Please enter the users last name");
+    Console.WriteLine("\nPlease enter the user's last name.");
     string? lastName = Console.ReadLine();
 
     if (string.IsNullOrWhiteSpace(lastName))
     {
-        Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
     lastName = lastName.Trim();
 
-    Console.WriteLine("Please enter the users current balance");
-    if (!decimal.TryParse(Console.ReadLine(), out decimal usersBalance))
+    Console.WriteLine("\nPlease enter the user's current balance.");
+    if (!decimal.TryParse(Console.ReadLine(), out decimal userBalance))
     {
-        Console.WriteLine("\nInvalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    Console.WriteLine("Please enter the users monthly income");
-    if (!decimal.TryParse(Console.ReadLine(), out decimal usersIncome))
+    Console.WriteLine("\nPlease enter the user's monthly income.");
+    if (!decimal.TryParse(Console.ReadLine(), out decimal userIncome))
     {
-        Console.WriteLine("\nInvalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    Console.WriteLine("Please enter the users monthly expenses");
-    if (!decimal.TryParse(Console.ReadLine(), out decimal usersExpenses))
+    Console.WriteLine("\nPlease enter the user's monthly expenses.");
+    if (!decimal.TryParse(Console.ReadLine(), out decimal userExpenses))
     {
-        Console.WriteLine("\nInvalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    User user = new User();
-
-    user.FirstName = firstName;
-    user.LastName = lastName;
-    user.Balance = usersBalance;
-    user.MonthlyIncome = usersIncome;
-    user.MonthlyExpenses = usersExpenses;
+    User user = new User()
+    {
+        FirstName = firstName,
+        LastName = lastName,
+        Balance = userBalance,
+        MonthlyIncome = userIncome,
+        MonthlyExpenses = userExpenses
+    };
 
     int newUserId;
 
@@ -123,7 +122,7 @@ void AddUser()
     }
     catch
     {
-        Console.WriteLine("Failed to add a new user\nPress enter to return to the main menu");
+        Console.WriteLine("\nFailed to add a new user.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
@@ -131,7 +130,7 @@ void AddUser()
 
     if (newUserId <= 0)
     {
-        Console.WriteLine("Failed to add user\nPress enter to return to the main menu");
+        Console.WriteLine("\nFailed to add a new user.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
@@ -139,38 +138,30 @@ void AddUser()
     user.UserId = newUserId;
     userList.Add(user);
 
-    Console.WriteLine("\nNew user successfuly added\nPress enter to return to the main menu");
+    Console.WriteLine("\nNew user successfully added.\nPress enter to return to the main menu.");
     Console.ReadLine();
 }
 
 void UserSummary()
 {
-    Console.WriteLine("\nPlease select which user you wish to view");
-
     if (userList.Count == 0)
     {
-        Console.WriteLine("There are no users to view\nPress enter to return to the main menu");
+        Console.WriteLine("\nThere are no users to view. Please add a user first.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
+    Console.WriteLine("\nPlease select which user you wish to view.");
     DisplayUsers();
 
-    if (!int.TryParse(Console.ReadLine(), out int userInput))
+    if (!int.TryParse(Console.ReadLine(), out int userInput) || userInput < 1 || userInput > userList.Count)
     {
-        Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    if ((userInput >= userList.Count) || (userInput < 0))
-    {
-        Console.WriteLine("Invalid input\nPress enter to return to the main menu");
-        Console.ReadLine();
-        return;
-    }
-
-    int selectedUserId = userList[userInput].UserId;
+    int selectedUserId = userList[userInput - 1].UserId;
 
     UserSummary? userSummary;
 
@@ -180,14 +171,14 @@ void UserSummary()
     }
     catch
     {
-        Console.WriteLine("Unable to access the database\nPress enter to return to the main menu");
+        Console.WriteLine("\nUnable to access the database.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
     if (userSummary == null)
     {
-        Console.WriteLine("User could not be found\nPress enter to return to the main menu");
+        Console.WriteLine("\nUser data could not be found.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
@@ -202,7 +193,7 @@ void UserSummary()
     Console.WriteLine($"Total transactions: {userSummary.TotalTransactions}");
     Console.WriteLine($"Largest expense: {userSummary.LargestExpense}\n\n");
 
-    Console.WriteLine("Press enter to return to the main menu");
+    Console.WriteLine("Press enter to return to the main menu.");
     Console.ReadLine();
 }
 
@@ -210,53 +201,52 @@ void AddTransaction()
 {
     if (userList.Count == 0)
     {
-        Console.WriteLine("\nThere are no users to add a transaction too. Please add a user first"
-        + "\nPress enter to return to the main menu");
+        Console.WriteLine("\nThere are no users to add a transaction to. Please add a user first.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    Console.WriteLine("Please select which user to add the transaction to");
+    Console.WriteLine("\nPlease select which user to add the transaction to.");
     DisplayUsers();
 
-    if (!int.TryParse(Console.ReadLine(), out int userInput) || (userInput >= userList.Count) || (userInput < 0))
+    if (!int.TryParse(Console.ReadLine(), out int userInput) || userInput < 1 || userInput > userList.Count)
     {
-        Console.WriteLine("\nInvalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    int selectedUserId = userList[userInput].UserId;
+    int selectedUserId = userList[userInput - 1].UserId;
 
     if (categoryList.Count == 0)
     {
-        Console.WriteLine("There are no categories available\nPress enter to return to the main menu");
+        Console.WriteLine("\nThere are no categories available.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    Console.WriteLine("\nPlease enter the transaction category\n");
+    Console.WriteLine("\nPlease enter the transaction category.");
 
     for (int i = 0; i < categoryList.Count; i++)
     {
         Console.WriteLine($"{i + 1} {categoryList[i].CategoryName}");
     }
 
-    if ((!int.TryParse(Console.ReadLine(), out int categoryChoice)) || categoryChoice < 1 || categoryChoice > categoryList.Count)
+    if (!int.TryParse(Console.ReadLine(), out int categoryChoice) || categoryChoice < 1 || categoryChoice > categoryList.Count)
     {
-        Console.WriteLine("\nInvalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
     int selectedCategoryId = categoryList[categoryChoice - 1].CategoryId;
 
-    Console.WriteLine("\nPlease enter a description for the transaction");
+    Console.WriteLine("\nPlease enter a description for the transaction.");
     string? transactionDescription = Console.ReadLine();
 
     if (transactionDescription == null)
     {
-        Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
@@ -268,7 +258,7 @@ void AddTransaction()
         transactionDescription = "N/A";
     }
 
-    Console.WriteLine("\nPlease enter the date of the transaction (Format: MM/DD/YYYY)");
+    Console.WriteLine("\nPlease enter the date of the transaction. (Format: MM/DD/YYYY)");
     string? purchaseDate = Console.ReadLine();
 
     string format = "M/d/yyyy";
@@ -276,15 +266,15 @@ void AddTransaction()
 
     if (!formatting)
     {
-        Console.WriteLine("\nInvalid input or format\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input or format.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    Console.WriteLine("\nPlease enter the transaction amount");
-    if (!decimal.TryParse(Console.ReadLine(), out decimal purchaseAmount))
+    Console.WriteLine("\nPlease enter the transaction amount.");
+    if (!decimal.TryParse(Console.ReadLine(), out decimal purchaseAmount) || purchaseAmount <= 0)
     {
-        Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
@@ -297,19 +287,19 @@ void AddTransaction()
     }
     catch
     {
-        Console.WriteLine("Unable to access the database\nPress enter to return to the main menu");
+        Console.WriteLine("\nUnable to access the database.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
     if (rowsAffected != 1)
     {
-        Console.WriteLine("\nOperation failed\nPress enter to return to the main menu");
+        Console.WriteLine("\nOperation failed.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    Console.WriteLine("\nTransaction successfully added\nPress enter to return to the main menu");
+    Console.WriteLine("\nTransaction successfully added.\nPress enter to return to the main menu.");
     Console.ReadLine();
 }
 
@@ -318,24 +308,23 @@ void ViewTransactions()
 
     if (userList.Count == 0)
     {
-        Console.WriteLine("\nThere are no users to add a transaction to. Please add a user first"
-        + "\nPress enter to return to the main menu");
+        Console.WriteLine("\nThere are no users available. Please add a user first.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    Console.WriteLine("\nPlease select which users transactions to view");
+    Console.WriteLine("\nPlease select which user's transactions to view.");
 
     DisplayUsers();
 
-    if (!int.TryParse(Console.ReadLine(), out int userInput) || (userInput >= userList.Count) || (userInput < 0))
+    if (!int.TryParse(Console.ReadLine(), out int userInput) || userInput < 1 || userInput > userList.Count)
     {
-        Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    int selectedUserId = userList[userInput].UserId;
+    int selectedUserId = userList[userInput - 1].UserId;
 
     List<Transaction> transactionList;
 
@@ -345,14 +334,14 @@ void ViewTransactions()
     }
     catch
     {
-        Console.WriteLine("Unable to access the database\nPress enter to return to the main menu");
+        Console.WriteLine("\nUnable to access the database.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
     if (transactionList.Count == 0)
     {
-        Console.WriteLine("There are no transactions for this user\nPress enter to return to the main menu");
+        Console.WriteLine("\nThere are no transactions for this user.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
@@ -365,24 +354,24 @@ void ViewTransactions()
     }
 
     Console.WriteLine();
-
-    int count = 1;
-    foreach (Category category in categoryList)
+    
+    for (int i = 0; i < categoryList.Count; i++)
     {
-        Console.WriteLine($"{count}. {category.CategoryName}");
-        count++;
+        Console.WriteLine($"{i + 1}. {categoryList[i].CategoryName}");
     }
 
-    Console.WriteLine($"\n{count}. Exit\n");
+    int exitChoice = categoryList.Count + 1;
 
-    if ((!int.TryParse(Console.ReadLine(), out int categoryChoice)) || categoryChoice < 1 || categoryChoice > count)
+    Console.WriteLine($"\n{exitChoice}. Exit\n");
+
+    if (!int.TryParse(Console.ReadLine(), out int categoryChoice) || categoryChoice < 1 || categoryChoice > exitChoice)
     {
-        Console.WriteLine("Invalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    if (categoryChoice == count)
+    if (categoryChoice == exitChoice)
     {
         return;
     }
@@ -396,29 +385,22 @@ void DeleteTransaction()
 {
     if (userList.Count == 0)
     {
-        Console.WriteLine("There are no users to delete a transaction from\nPress enter to return to the main menu");
+        Console.WriteLine("\nThere are no users to delete a transaction from.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    Console.WriteLine("\nPlease enter which user you wish to delete a transaction from");
+    Console.WriteLine("\nPlease select which user you wish to delete a transaction from.");
     DisplayUsers();
 
-    if (!int.TryParse(Console.ReadLine(), out int userInput))
+    if (!int.TryParse(Console.ReadLine(), out int userInput) || userInput < 1 || userInput > userList.Count)
     {
-        Console.WriteLine("\nInvalid input\nPress enter to return to the main menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    if ((userInput >= userList.Count) || (userInput < 0))
-    {
-        Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
-        Console.ReadLine();
-        return;
-    }
-
-    int selectedUserId = userList[userInput].UserId;
+    int selectedUserId = userList[userInput - 1].UserId;
 
     List<Transaction> transactionList;
 
@@ -428,14 +410,14 @@ void DeleteTransaction()
     }
     catch
     {
-        Console.WriteLine("Failed to access the database\nPress enter to return to the main menu");
+        Console.WriteLine("\nFailed to access the database.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
     if (transactionList.Count == 0)
     {
-        Console.WriteLine("This user does not have any transactions\nPress enter to return to the main menu");
+        Console.WriteLine("\nThis user does not have any transactions.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
@@ -446,11 +428,11 @@ void DeleteTransaction()
         Console.WriteLine($"{transaction.TransactionId}: {transaction.CategoryName,-29}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
     }
 
-    Console.WriteLine("\nPlease enter the number of the transaction you wish to delete");
+    Console.WriteLine("\nPlease enter the number of the transaction you wish to delete.");
 
-    if (!int.TryParse(Console.ReadLine(), out int transactionInput) || (transactionInput <= 0))
+    if (!int.TryParse(Console.ReadLine(), out int transactionInput) || transactionInput <= 0)
     {
-        Console.WriteLine("\nInvalid input\nPress enter to return to the menu");
+        Console.WriteLine("\nInvalid input.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
@@ -463,19 +445,19 @@ void DeleteTransaction()
     }
     catch
     {
-        Console.WriteLine("Failed to access the database\nPress enter to return to the main menu");
+        Console.WriteLine("\nFailed to access the database.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
     if (rowsAffected != 1)
     {
-        Console.WriteLine("Operation failed\nPress enter to return to the main menu");
+        Console.WriteLine("\nOperation failed.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
-    Console.WriteLine("\nTransaction successfully deleted\nPress enter to return to the main menu");
+    Console.WriteLine("\nTransaction successfully deleted.\nPress enter to return to the main menu.");
     Console.ReadLine();
 }
 
@@ -483,7 +465,8 @@ void DisplayUsers()
 {
     for (int i = 0; i < userList.Count; i++)
     {
-        Console.WriteLine($"{i}: {userList[i].FirstName} {userList[i].LastName}");
+        
+        Console.WriteLine($"{i + 1}: {userList[i].FirstName} {userList[i].LastName}");
     }
 }
 
@@ -498,14 +481,14 @@ void FilterTransactions(int userId, int categoryId)
     }
     catch
     {
-        Console.WriteLine("Unable to access the database\nPress enter to return to the main menu");
+        Console.WriteLine("\nUnable to access the database.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
 
     if (filteredTransactions.Count == 0)
     {
-        Console.WriteLine("There are no transactions in this category for this user\nPress enter to return to the main menu");
+        Console.WriteLine("\nThere are no transactions in this category for this user.\nPress enter to return to the main menu.");
         Console.ReadLine();
         return;
     }
@@ -517,12 +500,12 @@ void FilterTransactions(int userId, int categoryId)
         Console.WriteLine($"{transaction.CategoryName,-32}{transaction.TransactionDescription,-48}{transaction.Amount,-32}{transaction.TransactionDate}");
     }
 
-    Console.WriteLine("Press enter to return to the main menu");
+    Console.WriteLine("\nPress enter to return to the main menu.");
     Console.ReadLine();
 }
 
 void ViewTransactionHeader()
 {
-    Console.WriteLine($"\nTransaction Category\t\tTransaction Description\t\t\t\tTransaction Amount\t\tTransaction Date");
+    Console.WriteLine("\nTransaction Category\t\tTransaction Description\t\t\t\tTransaction Amount\t\tTransaction Date");
     Console.WriteLine("-------------------------------------------------------------------------------------------------------------------------------------------");
 }
