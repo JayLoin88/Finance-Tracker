@@ -100,3 +100,6 @@ Depending on your SQL Server configuration, you may need to modify the server po
 | Project Status |
 
 Finance Tracker is a completed console application and serves as a portfolio project demonstrating foundational C#, SQL Server, ADO.NET, relational database, and application architecture skills.
+
+
+Git pull practice
